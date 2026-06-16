@@ -1,6 +1,6 @@
 # EarnHFT: Efficient Hierarchical Reinforcement Learning for High Frequency Trading
 
-**Final Project for CS106.Q21 2025 - Artificial Intelligence**  
+**Final Project for CS106.Q21 (Academic Year 2025-2026, Semester II) - Artificial Intelligence**  
 **University of Information Technology (UIT)**
 
 **Team Members:**
