@@ -1,0 +1,41 @@
+# Python environments
+.venv/
+venv/
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Data and Output Model (Huge files)
+data/
+result/
+result_risk/
+ket_qua_hft/
+*.npy
+*.feather
+*.csv
+*.zip
+*.pt
+*.pth
+*.log
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Temp files
+all_code.txt
+tat_ca_code.txt
+merged_models_code.txt
+scratch_count.py
+
+# Extra Guides & Utilities
+PERSONAL_CLOUD_GUIDE.md
+QUICK_TEST_GUIDE.md
+KAGGLE_GUIDE.md
+merge_code.py
+merge_models.py
+src/EarnHFT_framwork/earnhft_detailed_guide.md

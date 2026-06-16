@@ -1,0 +1,9 @@
+numpy
+pandas
+matplotlib
+torch
+scikit-learn
+scipy
+pyarrow
+prettytable
+requests
