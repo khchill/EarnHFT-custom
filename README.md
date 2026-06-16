@@ -3,6 +3,10 @@
 **Final Project for CS106.Q21 2025 - Artificial Intelligence**  
 **University of Information Technology (UIT)**
 
+**Team Members:**
+- Nguyễn Khánh Hưng - 24520607
+- Huỳnh Quang Hưng - 24520591
+
 This repository is a customized implementation based on the AAAI 2024 paper: [EarnHFT: Efficient hierarchical reinforcement learning for high frequency trading](https://arxiv.org/pdf/2309.12891.pdf). 
 
 While we utilize the core algorithmic concepts from the official source code, we have made several architectural changes and implemented a completely custom data pipeline from scratch.
