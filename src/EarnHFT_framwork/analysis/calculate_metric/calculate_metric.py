@@ -47,6 +47,7 @@ def pick_agent_and_generate_result_table(root_path, name, mode='test'):
             valid_result = np.load(final_balance_file) / (
                 np.load(require_money_file) + 1e-12
             )
+            valid_result = float(np.squeeze(valid_result))
             valid_result_list.append(valid_result)
             
         if not valid_result_list or max(valid_result_list) == -999999.0:
@@ -148,7 +149,7 @@ def plot_all_baselines_curve(root_path_list, names, mode="test", save_path="resu
                     valid_result_list.append(-999999.0)
                     continue
                 val = np.load(final_balance_file) / (np.load(require_money_file) + 1e-12)
-                valid_result_list.append(val)
+                valid_result_list.append(float(np.squeeze(val)))
                 
             if not valid_result_list or max(valid_result_list) == -999999.0:
                 continue
@@ -250,7 +251,7 @@ def get_best_test_reward(root_path, mode="test", model_name=None):
         
         if os.path.exists(final_balance_file) and os.path.exists(require_money_file):
             val = np.load(final_balance_file) / (np.load(require_money_file) + 1e-12)
-            valid_result_list.append(val)
+            valid_result_list.append(float(np.squeeze(val)))
         else:
             valid_result_list.append(-999999.0)
             

@@ -40,6 +40,7 @@ def get_best_epoch_action_path(model_root, mode="test"):
         req_path = os.path.join(model_root, ep, "valid", "require_money.npy")
         if os.path.exists(val_path) and os.path.exists(req_path):
             reward = np.load(val_path) / (np.load(req_path) + 1e-12)
+            reward = float(np.squeeze(reward))
             if reward > best_reward:
                 best_reward = reward
                 best_epoch = ep
