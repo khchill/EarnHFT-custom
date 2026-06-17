@@ -28,13 +28,17 @@ The EarnHFT framework addresses the primary challenges in High-Frequency Trading
 ### 1. Low-Level Trading Bots (The Specialists)
 The Low-Level agents are built using the **Double Deep Q-Network (DDQN)** architecture. They operate at the **tick level (1-second intervals)**.
 - **Action Space:** Instead of simple (Buy, Sell, Hold) signals, the agent's action space consists of 5 discrete target positions: $A = \{0.0, 0.25, 0.5, 0.75, 1.0\}$. This dictates the percentage of the maximum holding capacity the bot wants to hold, allowing for nuanced inventory management rather than binary trades.
-- **Q-Teacher & Distillation:** High-frequency data is extremely noisy, causing standard RL rewards to be sparse and delayed. To guide the bot, we employ a "Q-Teacher". The Q-Teacher is an oracle that calculates the theoretically optimal Q-value $Q^*(s,a)$ by analyzing actual future price trajectories within a small window. During training, the agent minimizes the Mean Squared Error (MSE) against the Q-Teacher's values, alongside the traditional TD-Error:
-  $$Loss = Loss_{TD} + \alpha_{teacher} \times MSE(Q(s, a), Q^*(s, a))$$
+- **Q-Teacher & Distillation:** High-frequency data is extremely noisy, causing standard RL rewards to be sparse and delayed. To guide the bot, we employ a "Q-Teacher". The Q-Teacher is an oracle that calculates the theoretically optimal Q-value $Q^{*}(s,a)$ by analyzing actual future price trajectories within a small window. During training, the agent minimizes the Mean Squared Error (MSE) against the Q-Teacher's values, alongside the traditional TD-Error:
+
+  $$Loss = Loss_{TD} + \alpha_{teacher} \times MSE(Q(s, a), Q^{*}(s, a))$$
+
   Where $\alpha_{teacher}$ decays over time. This robust distillation process forces the agent to learn the underlying market physics rather than chasing random noise.
 - **Prioritized Experience Sampling (PES) with Risk Awareness:** We don't train just one generalized agent. We train a pool of agents, each with a different **Beta ($\beta$)** parameter representing Risk Preference. 
   - Using KDE (Kernel Density Estimation), the framework analyzes the return distribution of market chunks to assign an inverse-density weight $\omega_i = \frac{1}{\text{KDE}(R_i)}$.
   - A Boltzmann-based transformation is then applied to calculate the final sampling priority $W_i$ for chunk $i$ with return $R_i$:
+
     $$W_i = \omega_i \cdot e^{\beta \cdot R_i}$$
+
   - Chunks with extreme returns (high volatility) are assigned higher sampling weights for risk-seeking bots ($\beta > 0$), while stable chunks are prioritized for risk-averse bots ($\beta < 0$). This guarantees the creation of a diverse pool of bots: some excel in chaotic bull/bear runs, while others are masters of quiet, sideways markets.
 
 ### 2. Market Slicing & The Validation Tournament
