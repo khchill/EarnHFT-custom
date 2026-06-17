@@ -108,7 +108,7 @@ def process_and_merge(downloaded_files, date_str):
     
     # merge data 
     print("Merge data...")
-    df_merged = pd.concat([df_ob, trade_sec, trade_min_resampled], axis=1).ffill().bfill().reset_index()
+    df_merged = pd.concat([df_ob, trade_sec, trade_min_resampled], axis=1, sort=False).ffill().bfill().reset_index()
     
     return df_merged
 

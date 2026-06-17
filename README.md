@@ -28,9 +28,9 @@ The EarnHFT framework addresses the primary challenges in High-Frequency Trading
 ### 1. Low-Level Trading Bots (The Specialists)
 The Low-Level agents are built using the **Double Deep Q-Network (DDQN)** architecture. They operate at the **tick level (1-second intervals)**.
 - **Action Space:** Instead of simple (Buy, Sell, Hold) signals, the agent's action space consists of 5 discrete target positions: $A = \{0.0, 0.25, 0.5, 0.75, 1.0\}$. This dictates the percentage of the maximum holding capacity the bot wants to hold, allowing for nuanced inventory management rather than binary trades.
-- **Q-Teacher & Distillation:** High-frequency data is extremely noisy, causing standard RL rewards to be sparse and delayed. To guide the bot, we employ a "Q-Teacher". The Q-Teacher is an oracle that calculates the theoretically optimal Q-value $Q^{*}(s,a)$ by analyzing actual future price trajectories within a small window. During training, the agent minimizes the Mean Squared Error (MSE) against the Q-Teacher's values, alongside the traditional TD-Error:
+- **Q-Teacher & Distillation:** High-frequency data is extremely noisy, causing standard RL rewards to be sparse and delayed. To guide the bot, we employ a "Q-Teacher". The Q-Teacher is an oracle that calculates the theoretically optimal Q-value $Q^{*}(s,a)$ by analyzing actual future price trajectories within a small window. During training, the agent minimizes the **KL Divergence** against the Q-Teacher's action distribution, alongside the traditional TD-Error:
 
-  $$Loss = Loss_{TD} + \alpha_{teacher} \times MSE(Q(s, a), Q^{*}(s, a))$$
+  $$Loss = Loss_{TD} + \alpha_{teacher} \times D_{KL}(\pi(s) || \pi^{*}(s))$$
 
   Where $\alpha_{teacher}$ decays over time. This robust distillation process forces the agent to learn the underlying market physics rather than chasing random noise.
 - **Prioritized Experience Sampling (PES) with Risk Awareness:** We don't train just one generalized agent. We train a pool of agents, each with a different **Beta ($\beta$)** parameter representing Risk Preference. 
@@ -43,7 +43,7 @@ The Low-Level agents are built using the **Double Deep Q-Network (DDQN)** archit
 
 ### 2. Market Slicing & The Validation Tournament
 Once the low-level bots are trained, how do we map them to specific market trends? We use the **Validation Set**.
-- **Dynamic Time Warping (DTW):** We slice the validation data into smaller chunks and use the DTW algorithm to cluster these chunks into 5 distinct "Market Conditions" (Labels 0 to 4).
+- **Market Slicing & Clustering:** First, we apply a **Butterworth filter** to denoise the high-frequency price data. The validation data is then sliced into smaller segments based on their linear price trends (**slope**). Finally, we use **Dynamic Time Warping (DTW)** distance to merge and cluster these segments into exactly 5 distinct "Market Conditions" (Labels 0 to 4), representing various trends and volatility states.
 - **The Matrix Construction:** We run all our trained low-level bots across these 5 market conditions. We record their PnL and Sharpe Ratios.
 - **Selection:** For each market condition (0-4), we select the top 5 performing bots, creating a diverse $5 \times 5$ matrix of 25 elite bots (5 initial position states $\times$ 5 market conditions).
 
