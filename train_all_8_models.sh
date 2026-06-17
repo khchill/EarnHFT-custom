@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "=== STARTING PARALLEL TRAINING FOR 8 MODELS (4 LOW-LEVEL + 4 BASELINES) ==="
+echo "=== STARTING PARALLEL TRAINING FOR 10 MODELS (4 LOW-LEVEL + 4 BASELINES + 2 ABLATION) ==="
 
 PYTHON_CMD=".venv/bin/python"
 
@@ -52,7 +52,20 @@ CUDA_VISIBLE_DEVICES=0 nohup $PYTHON_CMD src/EarnHFT_framwork/RL/agent/base/ppo_
     --dataset_name BTCUSDT --train_data_path data/cleaned_data/BTCUSDT/tardis/train --transcation_cost 0.00015 --max_holding_number 0.01 \
     >log/base/BTCUSDT/train_ppo.log 2>&1 &
 
-echo "[!] System is training 8 models simultaneously on GPU 0."
+# -------------------------------------------------------------
+# PART 3: ABLATION STUDY (BETA 30)
+# -------------------------------------------------------------
+echo "[*] Starting 2 Ablation Study Agents..."
+
+CUDA_VISIBLE_DEVICES=0 nohup $PYTHON_CMD src/EarnHFT_framwork/RL/agent/low_level/ddqn_pes_only_teacher.py \
+    --beta 30 --train_data_path data/cleaned_data/BTCUSDT/tardis/train --dataset_name BTCUSDT \
+    >log/train/BTCUSDT/low_level/beta_30_only_teacher.log 2>&1 &
+
+CUDA_VISIBLE_DEVICES=0 nohup $PYTHON_CMD src/EarnHFT_framwork/RL/agent/low_level/ddqn_pes_only_td.py \
+    --beta 30 --train_data_path data/cleaned_data/BTCUSDT/tardis/train --dataset_name BTCUSDT \
+    >log/train/BTCUSDT/low_level/beta_30_only_td.log 2>&1 &
+
+echo "[!] System is training 10 models simultaneously on GPU 0."
 echo "[!] Use 'htop' to check CPU/RAM and 'nvidia-smi' to check VRAM."
 wait
-echo "[+] DONE TRAINING ALL 8 MODELS!"
+echo "[+] DONE TRAINING ALL 10 MODELS!"

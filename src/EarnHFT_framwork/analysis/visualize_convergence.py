@@ -64,25 +64,33 @@ def get_learning_curve(agent_root, is_multi=False):
             
     # Sort theo epoch number
     epochs_data.sort(key=lambda x: x[0])
-    return [x[1] for x in epochs_data]
+    epochs = [x[0] for x in epochs_data]
+    balances = [x[1] for x in epochs_data]
+    return epochs, balances
 
 def plot_convergence():
     base_result_dir = "result_risk/BTCUSDT"
     
-    # 1. DQN (bây giờ là DDQN Baseline)
-    dqn_path = os.path.join(base_result_dir, "dqn_ada_0", "seed_12345")
-    dqn_curve = get_learning_curve(dqn_path, is_multi=False)
+    # 1. Full Model (TD + Q-Teacher)
+    full_path = os.path.join(base_result_dir, "beta_30.0", "seed_12345")
+    full_epochs, full_curve = get_learning_curve(full_path, is_multi=True)
     
-    # 2. DDQN PES Risk Aware (thử nghiệm với một beta ví dụ như beta_30.0)
-    beta_path = os.path.join(base_result_dir, "beta_30.0", "seed_12345")
-    ddqn_pes_curve = get_learning_curve(beta_path, is_multi=True)
+    # 2. Only Q-Teacher
+    teacher_path = os.path.join(base_result_dir, "only_teacher_beta_30.0", "seed_12345")
+    teacher_epochs, teacher_curve = get_learning_curve(teacher_path, is_multi=True)
+    
+    # 3. Only TD Error
+    td_path = os.path.join(base_result_dir, "only_td_beta_30.0", "seed_12345")
+    td_epochs, td_curve = get_learning_curve(td_path, is_multi=True)
 
     plt.figure(figsize=(10, 6))
     
-    if dqn_curve:
-        plt.plot(range(1, len(dqn_curve) + 1), dqn_curve, label='Baseline DQN/DDQN (ada_0)', marker='o')
-    if ddqn_pes_curve:
-        plt.plot(range(1, len(ddqn_pes_curve) + 1), ddqn_pes_curve, label='Low-level DDQN PES (beta_30.0)', marker='s')
+    if full_curve:
+        plt.plot(full_epochs, full_curve, label='Full (TD + Teacher)', marker='o', linewidth=2)
+    if teacher_curve:
+        plt.plot(teacher_epochs, teacher_curve, label='Only Q-Teacher', marker='s', linewidth=2)
+    if td_curve:
+        plt.plot(td_epochs, td_curve, label='Only TD Error', marker='^', linewidth=2)
 
     plt.title('Hội tụ Validation Reward qua các Epoch')
     plt.xlabel('Epoch')

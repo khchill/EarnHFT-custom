@@ -70,9 +70,14 @@ def main():
     labels = ["label_0", "label_1", "label_2", "label_3", "label_4"]
     
     try:
-        tech_indicators = np.load("data/cleaned_data/BTCUSDT/tardis/feature_list.npy", allow_pickle=True).tolist()
+        feature_path_sec = "data/cleaned_data/BTCUSDT/tardis/second_feature.npy"
+        if os.path.exists(feature_path_sec):
+            tech_indicators = np.load(feature_path_sec, allow_pickle=True).tolist()
+        else:
+            print("cảnh báo: chưa có second_feature.npy, lấy tạm feature_list.npy")
+            tech_indicators = np.load("data/cleaned_data/BTCUSDT/tardis/feature_list.npy", allow_pickle=True).tolist()
     except Exception:
-        print("Khong tim thay feature_list.npy")
+        print("Khong tim thay feature nao ca")
         return
 
     # Tao danh sach tat ca cac tasks

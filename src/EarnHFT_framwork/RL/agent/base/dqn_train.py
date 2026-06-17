@@ -154,8 +154,8 @@ class PureDQN(object):
                         
                         q_eval = self.eval_net(b_states).gather(1, b_actions)
                         with torch.no_grad():
-                            next_eval_actions = self.eval_net(b_next_states).argmax(1).unsqueeze(1)
-                            q_next = self.target_net(b_next_states).gather(1, next_eval_actions)
+                            # Standard DQN: Lấy max Q-value trực tiếp từ target_net
+                            q_next = self.target_net(b_next_states).max(1)[0].unsqueeze(1)
                             q_target = b_rewards + self.args.gamma * q_next * (1 - b_dones)
                             
                         loss = self.loss_func(q_eval, q_target)

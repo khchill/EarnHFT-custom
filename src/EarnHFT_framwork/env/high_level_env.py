@@ -7,9 +7,11 @@ from model.net import Qnet
 class High_Level_Env:
     _MODEL_CACHE = None
 
-    def __init__(self, df, tech_indicator_list, bot_pool_size=5, model_dir="result_risk/BTCUSDT/potential_model"):
+    def __init__(self, df, high_level_features, low_level_features, bot_pool_size=5, model_dir="result_risk/BTCUSDT/potential_model"):
         self.df = df 
-        self.tech_indicator_list = tech_indicator_list
+        self.high_level_features = high_level_features
+        self.low_level_features = low_level_features
+        self.tech_indicator_list = high_level_features # For compatibility
         self.bot_pool_size = bot_pool_size
         self.model_dir = model_dir
         self.action_space = list(range(bot_pool_size)) # chon bot tu 0 den 4
@@ -46,9 +48,10 @@ class High_Level_Env:
 
     def _get_state(self):
         row = self.df.iloc[self.current_step]
-        state = [row[feat] for feat in self.tech_indicator_list if feat in row]
+        state = [row[feat] for feat in self.high_level_features if feat in row]
         if not state:
-            state = np.random.randn(19).tolist()
+            # dùng mảng toàn số 0 (zero-padding) thay cho random noise
+            state = np.zeros(len(self.high_level_features)).tolist()
         return np.array(state + [self.position], dtype=np.float32)
 
     def step(self, action_idx):
@@ -77,7 +80,7 @@ class High_Level_Env:
         
         if net is not None:
             try:
-                # Gia lap 60 giay giao dich cua bot (kien truc HFT chuan)
+                # Gia lap 60 giay giao dich cua bot 
                 prices = np.linspace(price_current, price_next, 60)
                 current_bot_pos = self.position
                 step_rewards = []
@@ -87,12 +90,13 @@ class High_Level_Env:
                     
                     if current_sec_idx < len(self.df):
                         row_sec = self.df.iloc[current_sec_idx]
-                        real_features = [row_sec[feat] for feat in self.tech_indicator_list if feat in row_sec]
+                        real_features = [row_sec[feat] for feat in self.low_level_features if feat in row_sec]
                     else:
                         real_features = []
                         
                     if not real_features:
-                        real_features = np.random.randn(54).tolist()
+                        # dùng mảng toàn số 0 (zero-padding) thay cho random noise
+                        real_features = np.zeros(len(self.low_level_features)).tolist()
                         
                     bot_state = real_features + [current_bot_pos]
                     bot_state_tensor = torch.FloatTensor(bot_state).unsqueeze(0)
@@ -119,11 +123,13 @@ class High_Level_Env:
                 next_position = current_bot_pos
                 self.second_rewards_history.extend(step_rewards)
             except Exception as e:
-                next_position = np.random.choice(self.positions_pool)
-                self.second_rewards_history.extend((np.random.randn(60) * 0.1).tolist())
+                # Cơ chế fail-safe: Giữ nguyên vị thế, reward = 0
+                next_position = self.position
+                self.second_rewards_history.extend([0.0] * 60)
         else:
-            next_position = np.random.choice(self.positions_pool)
-            self.second_rewards_history.extend((np.random.randn(60) * 0.1).tolist())
+            # Cơ chế fail-safe: Giữ nguyên vị thế, reward = 0
+            next_position = self.position
+            self.second_rewards_history.extend([0.0] * 60)
             
         reward = (next_position * price_next) - (self.position * price_current)
         self.position = next_position

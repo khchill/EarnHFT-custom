@@ -180,7 +180,7 @@ class DQN(object):
         total_steps = 0
         
         # Thư mục lưu kết quả ứng với Bot Beta
-        root_dir = f"{self.args.result_path}/BTCUSDT/beta_{self.beta}/seed_{self.seed}"
+        root_dir = f"{self.args.result_path}/BTCUSDT/only_teacher_beta_{self.beta}/seed_{self.seed}"
         
         for epoch in range(epochs):
             sampled_chunk_file, _, _ = chunk_selector.sample()
@@ -197,9 +197,8 @@ class DQN(object):
             
             while not done:
                 total_steps += 1
-                step_ratio = total_steps / self.args.ada_step
-                self.alpha_teacher = max(self.args.ada_min, self.args.ada_init - step_ratio * (self.args.ada_init - self.args.ada_min))
-                
+                # alpha cố định không giảm (đối với Only Q-Teacher)
+                self.alpha_teacher = self.args.ada_init                
                 state_tensor = torch.FloatTensor(state).unsqueeze(0).to(self.device)
                 q_eval = self.eval_net(state_tensor)
                 
@@ -256,7 +255,8 @@ class DQN(object):
                     # Loss KL tính với Q-Teacher
                     loss_kl = F.kl_div(F.log_softmax(self.eval_net(b_states), dim=1), F.softmax(b_q_action, dim=1), reduction='batchmean')
                     
-                    loss = loss_td + self.alpha_teacher * loss_kl
+                    # Only Q-Teacher loss, no TD Error loss
+                    loss = self.alpha_teacher * loss_kl
                     
                     self.optimizer.zero_grad()
                     loss.backward()

@@ -180,7 +180,7 @@ class DQN(object):
         total_steps = 0
         
         # Thư mục lưu kết quả ứng với Bot Beta
-        root_dir = f"{self.args.result_path}/BTCUSDT/beta_{self.beta}/seed_{self.seed}"
+        root_dir = f"{self.args.result_path}/BTCUSDT/only_td_beta_{self.beta}/seed_{self.seed}"
         
         for epoch in range(epochs):
             sampled_chunk_file, _, _ = chunk_selector.sample()
@@ -256,7 +256,8 @@ class DQN(object):
                     # Loss KL tính với Q-Teacher
                     loss_kl = F.kl_div(F.log_softmax(self.eval_net(b_states), dim=1), F.softmax(b_q_action, dim=1), reduction='batchmean')
                     
-                    loss = loss_td + self.alpha_teacher * loss_kl
+                    # Only TD Error loss, no Q-Teacher loss
+                    loss = loss_td
                     
                     self.optimizer.zero_grad()
                     loss.backward()

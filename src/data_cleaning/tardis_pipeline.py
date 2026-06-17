@@ -392,14 +392,24 @@ def main(test_run=False):
         if train_files:
             # Lấy 1 file train bất kỳ để đánh giá IC
             sample_df = pd.read_feather(train_files[0])
-            feature_train, _, _ = analysis_ic_longterm(sample_df, period=1, threshold=0.01)
             
-            # Lấy 54 features có IC cao nhất
-            feature_list = sorted(feature_train.items(), key=lambda x: x[1], reverse=True)
-            top_54_keys = [feat for feat, val in feature_list[:54]]
+            # --- Phân tích IC cho giây ---
+            feature_train_sec, _, _ = analysis_ic_longterm(sample_df, period=1, threshold=0.01)
+            feature_list_sec = sorted(feature_train_sec.items(), key=lambda x: x[1], reverse=True)
+            top_54_keys = [feat for feat, val in feature_list_sec[:54]]
             
-            np.save(CLEANED_DIR / "feature_list.npy", np.array(top_54_keys))
-            print(f"Đã phân tích IC và lưu {len(top_54_keys)} tính năng tốt nhất tại {CLEANED_DIR / 'feature_list.npy'}")
+            # --- Phân tích IC cho phút ---
+            feature_train_min, _, _ = analysis_ic_longterm(sample_df, period=60, threshold=0.01)
+            feature_list_min = sorted(feature_train_min.items(), key=lambda x: x[1], reverse=True)
+            top_19_keys = [feat for feat, val in feature_list_min[:19]]
+            
+            # Lưu lại
+            np.save(CLEANED_DIR / "second_feature.npy", np.array(top_54_keys))
+            np.save(CLEANED_DIR / "minitue_feature.npy", np.array(top_19_keys))
+            np.save(CLEANED_DIR / "feature_list.npy", np.array(top_54_keys)) #lowlevel sai do code sai
+            
+            print(f"Đã phân tích IC và lưu {len(top_54_keys)} tính năng giây tại {CLEANED_DIR / 'second_feature.npy'}")
+            print(f"Đã phân tích IC và lưu {len(top_19_keys)} tính năng phút tại {CLEANED_DIR / 'minitue_feature.npy'}")
         else:
             np.save(CLEANED_DIR / "feature_list.npy", np.array(global_feature_cols))
             print(f"Không tìm thấy file train. Đã lưu toàn bộ tính năng tại {CLEANED_DIR / 'feature_list.npy'}")

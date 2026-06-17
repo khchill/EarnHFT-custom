@@ -48,13 +48,20 @@ class RouterDQN:
         self.gamma = args.gamma
         self.batch_size = args.batch_size
         
-        feature_path = "data/cleaned_data/BTCUSDT/tardis/feature_list.npy"
-        if not os.path.exists(feature_path):
-            print("loi ko thay feature_list.npy nha!")
-            sys.exit(1)
+        feature_path_min = "data/cleaned_data/BTCUSDT/tardis/minitue_feature.npy"
+        feature_path_sec = "data/cleaned_data/BTCUSDT/tardis/second_feature.npy"
+        
+        if os.path.exists(feature_path_min) and os.path.exists(feature_path_sec):
+            self.high_level_features = np.load(feature_path_min, allow_pickle=True).tolist()
+            self.low_level_features = np.load(feature_path_sec, allow_pickle=True).tolist()
+        else:
+            print("cảnh báo: không tìm thấy 2 file feature chuẩn (chưa chạy pipeline?). Đang tải fallback...")
+            feature_path_old = "data/cleaned_data/BTCUSDT/tardis/feature_list.npy"
+            fallback_features = np.load(feature_path_old, allow_pickle=True).tolist()
+            self.high_level_features = fallback_features[:19] # lay 19 thang dau tien
+            self.low_level_features = fallback_features
             
-        self.tech_indicators = np.load(feature_path, allow_pickle=True).tolist()
-        self.state_dim = len(self.tech_indicators) + 1 
+        self.state_dim = len(self.high_level_features) + 1 
         
         # action = 5 (tương ứng với 5 Low-level bots trong Pool)
         self.action_dim = 5 
@@ -98,8 +105,7 @@ class RouterDQN:
             for chunk_file in chunk_files:
                 print(f"High-level Router đang nạp chunk: {os.path.basename(chunk_file)}")
                 df_train = pd.read_feather(chunk_file).bfill().ffill().fillna(0.0)
-                env = High_Level_Env(df_train, tech_indicator_list=self.tech_indicators)
-                
+                env = High_Level_Env(df_train, self.high_level_features, self.low_level_features, model_dir=self.args.model_dir)
                 state, _ = env.reset()
                 done = False
                 
@@ -174,7 +180,7 @@ class RouterDQN:
                     all_valid_rewards, all_valid_require_money, all_valid_actions = [], [], []
                     for valid_file in valid_files:
                         df_valid = pd.read_feather(valid_file).bfill().ffill().fillna(0.0)
-                        valid_env = High_Level_Env(df_valid, tech_indicator_list=self.tech_indicators)
+                        valid_env = High_Level_Env(df_valid, self.high_level_features, self.low_level_features, model_dir=self.args.model_dir)
                         state, _ = valid_env.reset()
                         done = False
                         
