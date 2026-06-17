@@ -68,7 +68,6 @@ def main():
     betas = [-90.0, -10.0, 30.0, 100.0]
     initial_actions = ["initial_action_0", "initial_action_1", "initial_action_2", "initial_action_3", "initial_action_4"]
     labels = ["label_0", "label_1", "label_2", "label_3", "label_4"]
-    max_epochs = 40
     
     try:
         tech_indicators = np.load("data/cleaned_data/BTCUSDT/tardis/feature_list.npy", allow_pickle=True).tolist()
@@ -84,7 +83,7 @@ def main():
         if not os.path.exists(coffient_path):
             continue
             
-        epoch_dirs = [f"epoch_{e}" for e in range(1, max_epochs + 1)]
+        epoch_dirs = [d for d in os.listdir(coffient_path) if d.startswith("epoch_")]
         for epoch in epoch_dirs:
             epoch_path = os.path.join(coffient_path, epoch)
             model_file = os.path.join(epoch_path, "model.pth")
