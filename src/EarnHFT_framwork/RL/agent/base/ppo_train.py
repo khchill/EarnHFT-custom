@@ -1,5 +1,9 @@
 import sys
 import os
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["F_ENABLE_ONEDNN_OPTS"] = "0"
 import random
 import argparse
 import torch
@@ -203,74 +207,78 @@ class PPO(object):
             }, os.path.join(ep_dir, "model.pth"))
             
             
-            # validate
-            valid_dir_path = "data/cleaned_data/BTCUSDT/tardis/valid"
-            if os.path.exists(valid_dir_path) and os.path.isdir(valid_dir_path):
-                valid_files = sorted([os.path.join(valid_dir_path, f) for f in os.listdir(valid_dir_path) if f.endswith(".feather")])
-                all_rewards, all_actions, all_require_money = [], [], []
-                
-                for valid_file_path in valid_files:
-                    valid_df = pd.read_feather(valid_file_path).bfill().ffill().fillna(0.0)
-                    valid_env = Testing_env(valid_df, tech_indicators, transcation_cost=self.args.transcation_cost, max_holding_number=self.args.max_holding_number, action_dim=self.args.action_dim)
+            if (epoch + 1) % 20 == 0 or epoch == epochs - 1:
+                print(f"[*] Epoch {epoch+1}: Đang chạy Valid và Test...")
+                # validate
+                valid_dir_path = "data/cleaned_data/BTCUSDT/tardis/valid"
+                if os.path.exists(valid_dir_path) and os.path.isdir(valid_dir_path):
+                    valid_files = sorted([os.path.join(valid_dir_path, f) for f in os.listdir(valid_dir_path) if f.endswith(".feather")])
+                    all_rewards, all_actions, all_require_money = [], [], []
                     
-                    valid_state, _ = valid_env.reset()
-                    valid_done = False
-                    daily_actions = []
-                    
-                    while not valid_done:
-                        valid_state_tensor = torch.FloatTensor(valid_state).unsqueeze(0).to(self.device)
-                        with torch.no_grad():
-                            action_logits = actor(valid_state_tensor)
-                            action = torch.argmax(action_logits, dim=-1).item()
-                        next_valid_state, v_reward, valid_done, _ = valid_env.step(action)
-                        all_rewards.append(v_reward)
-                        daily_actions.append(action)
-                        valid_state = next_valid_state
+                    for valid_file_path in valid_files:
+                        valid_df = pd.read_feather(valid_file_path).bfill().ffill().fillna(0.0)
+                        valid_env = Testing_env(valid_df, tech_indicators, transcation_cost=self.args.transcation_cost, max_holding_number=self.args.max_holding_number, action_dim=self.args.action_dim)
                         
-                    all_actions.extend(daily_actions)
-                    all_require_money.append(valid_env.require_money)
-                    
-                v_dir = os.path.join(ep_dir, "valid")
-                os.makedirs(v_dir, exist_ok=True)
-                np.save(os.path.join(v_dir, "final_balance.npy"), np.array(np.sum(all_rewards)))
-                np.save(os.path.join(v_dir, "reward.npy"), np.array(all_rewards))
-                np.save(os.path.join(v_dir, "action.npy"), np.array(all_actions))
-                np.save(os.path.join(v_dir, "require_money.npy"), np.array(all_require_money))
-            
-            test_dir_path = "data/cleaned_data/BTCUSDT/tardis/test"
-
-            if os.path.exists(test_dir_path) and os.path.isdir(test_dir_path):
-                test_files = sorted([os.path.join(test_dir_path, f) for f in os.listdir(test_dir_path) if f.endswith(".feather")])
-                
-                all_rewards, all_actions, all_require_money = [], [], []
-                
-                for test_file_path in test_files:
-                    test_df = pd.read_feather(test_file_path).bfill().ffill().fillna(0.0)
-                    test_env = Testing_env(test_df, tech_indicators, transcation_cost=self.args.transcation_cost, max_holding_number=self.args.max_holding_number, action_dim=self.args.action_dim)
-                    
-                    test_state, _ = test_env.reset()
-                    test_done = False
-                    daily_rewards, daily_actions = [], []
-                    
-                    while not test_done:
-                        test_state_tensor = torch.FloatTensor(test_state).unsqueeze(0).to(self.device)
-                        with torch.no_grad():
-                            action_logits = actor(test_state_tensor)
-                            action = torch.argmax(action_logits, dim=-1).item()
-                        next_test_state, t_reward, test_done, _ = test_env.step(action)
-                        daily_rewards.append(t_reward)
-                        daily_actions.append(action)
-                        test_state = next_test_state
+                        valid_state, _ = valid_env.reset()
+                        valid_done = False
+                        daily_actions = []
                         
-                    all_rewards.extend(daily_rewards)
-                    all_actions.extend(daily_actions)
-                    all_require_money.append(test_env.require_money)
+                        while not valid_done:
+                            valid_state_tensor = torch.FloatTensor(valid_state).unsqueeze(0).to(self.device)
+                            with torch.no_grad():
+                                action_logits = actor(valid_state_tensor)
+                                action = torch.argmax(action_logits, dim=-1).item()
+                            next_valid_state, v_reward, valid_done, _ = valid_env.step(action)
+                            all_rewards.append(v_reward)
+                            daily_actions.append(action)
+                            valid_state = next_valid_state
+                            
+                        all_actions.extend(daily_actions)
+                        all_require_money.append(valid_env.require_money)
+                        
+                    v_dir = os.path.join(ep_dir, "valid")
+                    os.makedirs(v_dir, exist_ok=True)
+                    np.save(os.path.join(v_dir, "final_balance.npy"), np.array(np.sum(all_rewards)))
+                    np.save(os.path.join(v_dir, "reward.npy"), np.array(all_rewards))
+                    np.save(os.path.join(v_dir, "action.npy"), np.array(all_actions))
+                    np.save(os.path.join(v_dir, "require_money.npy"), np.array(all_require_money))
+                
+                test_dir_path = "data/cleaned_data/BTCUSDT/tardis/test"
+    
+                if os.path.exists(test_dir_path) and os.path.isdir(test_dir_path):
+                    test_files = sorted([os.path.join(test_dir_path, f) for f in os.listdir(test_dir_path) if f.endswith(".feather")])
                     
-                t_dir = os.path.join(ep_dir, "test")
-                os.makedirs(t_dir, exist_ok=True)
-                np.save(os.path.join(t_dir, "reward.npy"), np.array(all_rewards))
-                np.save(os.path.join(t_dir, "action.npy"), np.array(all_actions))
-                np.save(os.path.join(t_dir, "require_money.npy"), np.array(all_require_money))
+                    all_rewards, all_actions, all_require_money = [], [], []
+                    
+                    for test_file_path in test_files:
+                        test_df = pd.read_feather(test_file_path).bfill().ffill().fillna(0.0)
+                        test_env = Testing_env(test_df, tech_indicators, transcation_cost=self.args.transcation_cost, max_holding_number=self.args.max_holding_number, action_dim=self.args.action_dim)
+                        
+                        test_state, _ = test_env.reset()
+                        test_done = False
+                        daily_rewards, daily_actions = [], []
+                        
+                        while not test_done:
+                            test_state_tensor = torch.FloatTensor(test_state).unsqueeze(0).to(self.device)
+                            with torch.no_grad():
+                                action_logits = actor(test_state_tensor)
+                                action = torch.argmax(action_logits, dim=-1).item()
+                            next_test_state, t_reward, test_done, _ = test_env.step(action)
+                            daily_rewards.append(t_reward)
+                            daily_actions.append(action)
+                            test_state = next_test_state
+                            
+                        all_rewards.extend(daily_rewards)
+                        all_actions.extend(daily_actions)
+                        all_require_money.append(test_env.require_money)
+                        
+                    t_dir = os.path.join(ep_dir, "test")
+                    os.makedirs(t_dir, exist_ok=True)
+                    np.save(os.path.join(t_dir, "reward.npy"), np.array(all_rewards))
+                    np.save(os.path.join(t_dir, "action.npy"), np.array(all_actions))
+                    np.save(os.path.join(t_dir, "require_money.npy"), np.array(all_require_money))
+            else:
+                print(f"[*] Epoch {epoch+1} hoàn tất Train (Bỏ qua Valid/Test để tiết kiệm thời gian)")
                 
         print("chay xong ppo")
 

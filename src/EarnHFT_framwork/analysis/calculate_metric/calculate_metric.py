@@ -245,13 +245,16 @@ def get_best_test_reward(root_path, mode="test", model_name=None):
     valid_result_list = []
     for epoch in epoch_path_list:
         v_path = os.path.join(root_path, epoch, "valid")
-        if os.path.exists(v_path):
-            val = np.load(os.path.join(v_path, "final_balance.npy")) / (np.load(os.path.join(v_path, "require_money.npy")) + 1e-12)
+        final_balance_file = os.path.join(v_path, "final_balance.npy")
+        require_money_file = os.path.join(v_path, "require_money.npy")
+        
+        if os.path.exists(final_balance_file) and os.path.exists(require_money_file):
+            val = np.load(final_balance_file) / (np.load(require_money_file) + 1e-12)
             valid_result_list.append(val)
         else:
-            valid_result_list.append(-999)
+            valid_result_list.append(-999999.0)
             
-    if not valid_result_list or max(valid_result_list) == -999:
+    if not valid_result_list or max(valid_result_list) == -999999.0:
         return None, None
         
     best_epoch = epoch_path_list[valid_result_list.index(max(valid_result_list))]

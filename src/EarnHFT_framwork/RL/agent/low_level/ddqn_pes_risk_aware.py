@@ -274,36 +274,40 @@ class DQN(object):
             os.makedirs(epoch_dir, exist_ok=True)
             torch.save(self.eval_net.state_dict(), os.path.join(epoch_dir, "model.pth"))
             
-            test_dir_path = "data/cleaned_data/BTCUSDT/tardis/test"
-            if os.path.exists(test_dir_path) and os.path.isdir(test_dir_path):
-                test_files = sorted([os.path.join(test_dir_path, f) for f in os.listdir(test_dir_path) if f.endswith(".feather")])
-                all_rewards, all_actions, all_require_money = [], [], []
-                
-                for test_file_path in test_files:
-                    test_df = pd.read_feather(test_file_path).bfill().ffill().fillna(0.0)
-                    test_env = Testing_env(test_df, tech_indicators, transcation_cost=self.args.transcation_cost, max_holding_number=self.args.max_holding_number, action_dim=self.args.action_dim)
-                    test_state, _ = test_env.reset()
-                    test_done = False
-                    daily_rewards, daily_actions = [], []
+            if (epoch + 1) % 10 == 0 or epoch == epochs - 1:
+                print(f"[*] Epoch {epoch+1}: Đang chạy Test...")
+                test_dir_path = "data/cleaned_data/BTCUSDT/tardis/test"
+                if os.path.exists(test_dir_path) and os.path.isdir(test_dir_path):
+                    test_files = sorted([os.path.join(test_dir_path, f) for f in os.listdir(test_dir_path) if f.endswith(".feather")])
+                    all_rewards, all_actions, all_require_money = [], [], []
                     
-                    while not test_done:
-                        state_tensor = torch.FloatTensor(test_state).unsqueeze(0).to(self.device)
-                        with torch.no_grad():
-                            action_idx = torch.argmax(self.eval_net(state_tensor)).item()
-                        next_state, reward, test_done, _ = test_env.step(action_idx)
-                        daily_rewards.append(reward)
-                        daily_actions.append(action_idx)
-                        test_state = next_state
+                    for test_file_path in test_files:
+                        test_df = pd.read_feather(test_file_path).bfill().ffill().fillna(0.0)
+                        test_env = Testing_env(test_df, tech_indicators, transcation_cost=self.args.transcation_cost, max_holding_number=self.args.max_holding_number, action_dim=self.args.action_dim)
+                        test_state, _ = test_env.reset()
+                        test_done = False
+                        daily_rewards, daily_actions = [], []
                         
-                    all_rewards.extend(daily_rewards)
-                    all_actions.extend(daily_actions)
-                    all_require_money.append(test_env.require_money)
-                    
-                t_dir = os.path.join(epoch_dir, "test")
-                os.makedirs(t_dir, exist_ok=True)
-                np.save(os.path.join(t_dir, "reward.npy"), np.array(all_rewards))
-                np.save(os.path.join(t_dir, "action.npy"), np.array(all_actions))
-                np.save(os.path.join(t_dir, "require_money.npy"), np.array(all_require_money))
+                        while not test_done:
+                            state_tensor = torch.FloatTensor(test_state).unsqueeze(0).to(self.device)
+                            with torch.no_grad():
+                                action_idx = torch.argmax(self.eval_net(state_tensor)).item()
+                            next_state, reward, test_done, _ = test_env.step(action_idx)
+                            daily_rewards.append(reward)
+                            daily_actions.append(action_idx)
+                            test_state = next_state
+                            
+                        all_rewards.extend(daily_rewards)
+                        all_actions.extend(daily_actions)
+                        all_require_money.append(test_env.require_money)
+                        
+                    t_dir = os.path.join(epoch_dir, "test")
+                    os.makedirs(t_dir, exist_ok=True)
+                    np.save(os.path.join(t_dir, "reward.npy"), np.array(all_rewards))
+                    np.save(os.path.join(t_dir, "action.npy"), np.array(all_actions))
+                    np.save(os.path.join(t_dir, "require_money.npy"), np.array(all_require_money))
+            else:
+                print(f"[*] Epoch {epoch+1} hoàn tất Train (Bỏ qua Test để tiết kiệm thời gian)")
                 
         print("xong low-level")
 

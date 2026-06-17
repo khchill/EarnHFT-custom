@@ -37,11 +37,41 @@ def get_test_contrast_curve(df: pd.DataFrame, save_path, action_list):
     plt.savefig(save_path)
     plt.close()
 
+def get_best_epoch_action_path(model_root, mode="test"):
+    if "rule_base" in model_root:
+        path = os.path.join(model_root, mode, "action.npy")
+        return path if os.path.exists(path) else None
+
+    if not os.path.exists(model_root):
+        return None
+    
+    epoch_dirs = [d for d in os.listdir(model_root) if d.startswith("epoch_")]
+    if not epoch_dirs:
+        return None
+        
+    best_epoch = None
+    best_reward = -float("inf")
+    
+    for ep in epoch_dirs:
+        val_path = os.path.join(model_root, ep, "valid", "final_balance.npy")
+        req_path = os.path.join(model_root, ep, "valid", "require_money.npy")
+        if os.path.exists(val_path) and os.path.exists(req_path):
+            reward = np.load(val_path) / (np.load(req_path) + 1e-12)
+            if reward > best_reward:
+                best_reward = reward
+                best_epoch = ep
+                
+    if best_epoch is None:
+        best_epoch = "epoch_1"
+        
+    path = os.path.join(model_root, best_epoch, mode, "action.npy")
+    return path if os.path.exists(path) else None
+
 if __name__ == "__main__":
     import os
     import glob
 
-    print("Bắt đầu quét thư mục result_risk để vẽ biểu đồ...")
+    print("Bắt đầu quét thư mục result_risk để vẽ biểu đồ cho các model tốt nhất...")
     
     valid_dir = "data/cleaned_data/BTCUSDT/tardis/valid"
     test_dir = "data/cleaned_data/BTCUSDT/tardis/test"
@@ -63,11 +93,25 @@ if __name__ == "__main__":
             test_df = pd.concat([pd.read_feather(f) for f in test_files])
             test_df = test_df.reset_index(drop=True)
 
-    action_files = glob.glob('result_risk/**/action.npy', recursive=True)
+    models_to_check = {
+        "IV": "result_risk/BTCUSDT/rule_base/IV",
+        "MACD": "result_risk/BTCUSDT/rule_base/MACD",
+        "DQN": "result_risk/BTCUSDT/dqn_ada_0/seed_12345",
+        "CDQN-RP": "result_risk/BTCUSDT/cdqn_rp/seed_12345",
+        "PPO": "result_risk/BTCUSDT/ppo/seed_12345",
+        "DRA": "result_risk/BTCUSDT/dra_short/seed_12345",
+        "EarnHFT": "result_risk/BTCUSDT/high_level/seed_12345"
+    }
+
+    action_files = []
+    for mode in ["valid", "test"]:
+        for model_name, root_path in models_to_check.items():
+            path = get_best_epoch_action_path(root_path, mode=mode)
+            if path:
+                action_files.append(path)
+
     count = 0
     for act_file in action_files:
-        if "valid_multi" in act_file:
-            continue
 
         actions = np.load(act_file, allow_pickle=True)
         # Hỗ trợ High-Level Router: action lưu dạng [n_idx, action_idx]

@@ -3,6 +3,8 @@ echo === STARTING BOT EVALUATION, ROUTER TRAINING AND REPORT GENERATION (WINDOWS
 
 :: Ensure using correct Python virtual environment
 set PYTHON_CMD=".venv\Scripts\python.exe"
+set PYTHONIOENCODING=utf-8
+set PYTHONUTF8=1
 
 :: -------------------------------------------------------------
 :: PART 1: Low-level Bots Validation and High-level Router Training
