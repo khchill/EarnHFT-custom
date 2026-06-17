@@ -75,38 +75,38 @@ class High_Level_Env:
         
         net = self.bots_matrix.get((n_idx, m_idx), None)
         
+        # Lay 54 features that cua phut hien tai
+        real_features = [row_current[feat] for feat in self.tech_indicator_list if feat in row_current]
+        if not real_features:
+            real_features = np.random.randn(54).tolist()
+            
         if net is not None:
             try:
-                # Gia lap 60 giay giao dich cua bot
-                prices = np.linspace(price_current, price_next, 60)
                 current_bot_pos = self.position
-                step_rewards = []
                 
-                for step_sec in range(60):
-                    bot_state = np.random.randn(54).tolist() + [current_bot_pos]
-                    bot_state_tensor = torch.FloatTensor(bot_state).unsqueeze(0)
-                    with torch.no_grad():
-                        q_values = net(bot_state_tensor)
-                        bot_action = torch.argmax(q_values).item()
+                # 1. Đưa 54 features THẬT + vị thế hiện tại vào cho bot dự đoán ĐÚNG 1 LẦN
+                bot_state = real_features + [current_bot_pos]
+                bot_state_tensor = torch.FloatTensor(bot_state).unsqueeze(0)
+                
+                with torch.no_grad():
+                    q_values = net(bot_state_tensor)
+                    bot_action = torch.argmax(q_values).item()
+                
+                # 2. Cập nhật vị thế dựa trên quyết định của bot
+                if bot_action == 1:
+                    current_bot_pos = min(0.01, current_bot_pos + 0.0025)
+                elif bot_action == 2:
+                    current_bot_pos = min(0.01, current_bot_pos + 0.005)
+                elif bot_action == 3:
+                    current_bot_pos = max(0.0, current_bot_pos - 0.0025)
+                elif bot_action == 4:
+                    current_bot_pos = max(0.0, current_bot_pos - 0.005)
                     
-                    prev_bot_pos = current_bot_pos
-                    if bot_action == 1:
-                        current_bot_pos = min(0.01, current_bot_pos + 0.0025)
-                    elif bot_action == 2:
-                        current_bot_pos = min(0.01, current_bot_pos + 0.005)
-                    elif bot_action == 3:
-                        current_bot_pos = max(0.0, current_bot_pos - 0.0025)
-                    elif bot_action == 4:
-                        current_bot_pos = max(0.0, current_bot_pos - 0.005)
-                        
-                    p_curr = prices[step_sec]
-                    p_nxt = prices[step_sec + 1] if step_sec + 1 < 60 else price_next
-                    # Sửa lỗi: Phải tính cả sự thay đổi của tiền mặt (cash flow) khi mua/bán.
-                    # Công thức: Vị_thế_mới*Giá_mới - Vị_thế_cũ*Giá_cũ + Dòng_tiền_mua_bán
-                    # Dòng tiền mua/bán = -(Vị_thế_mới - Vị_thế_cũ)*Giá_cũ
-                    # Rút gọn lại thành: Vị_thế_mới * (Giá_mới - Giá_cũ)
-                    sec_reward = current_bot_pos * (p_nxt - p_curr)
-                    step_rewards.append(sec_reward)
+                # 3. Tính lợi nhuận thực tế sau 1 phút với vị thế mới (Chênh lệch giá đầu phút và cuối phút)
+                total_reward_1_min = current_bot_pos * (price_next - price_current)
+                
+                # 4. Chia đều lợi nhuận ra 60 giây để giữ nguyên cấu trúc array của hệ thống
+                step_rewards = [total_reward_1_min / 60.0] * 60
                 
                 next_position = current_bot_pos
                 self.second_rewards_history.extend(step_rewards)
