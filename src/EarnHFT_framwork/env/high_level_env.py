@@ -24,7 +24,7 @@ class High_Level_Env:
         
         if High_Level_Env._MODEL_CACHE is None:
             High_Level_Env._MODEL_CACHE = {}
-            state_dim = 55
+            state_dim = len(self.low_level_features) + 1
             action_dim = 5
             for n_idx in range(5):
                 for m_idx in range(5):
@@ -48,9 +48,8 @@ class High_Level_Env:
 
     def _get_state(self):
         row = self.df.iloc[self.current_step]
-        state = [row[feat] for feat in self.high_level_features if feat in row]
+        state = [row.get(feat, 0.0) for feat in self.high_level_features]
         if not state:
-            # dùng mảng toàn số 0 (zero-padding) thay cho random noise
             state = np.zeros(len(self.high_level_features)).tolist()
         return np.array(state + [self.position], dtype=np.float32)
 
@@ -90,12 +89,11 @@ class High_Level_Env:
                     
                     if current_sec_idx < len(self.df):
                         row_sec = self.df.iloc[current_sec_idx]
-                        real_features = [row_sec[feat] for feat in self.low_level_features if feat in row_sec]
+                        real_features = [row_sec.get(feat, 0.0) for feat in self.low_level_features]
                     else:
                         real_features = []
                         
                     if not real_features:
-                        # dùng mảng toàn số 0 (zero-padding) thay cho random noise
                         real_features = np.zeros(len(self.low_level_features)).tolist()
                         
                     bot_state = real_features + [current_bot_pos]

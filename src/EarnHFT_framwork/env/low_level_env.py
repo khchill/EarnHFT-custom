@@ -35,9 +35,9 @@ class Training_Env:
         row = self.df.iloc[self.current_step]
 
         if len(self.tech_indicator_list) > 0 and isinstance(self.tech_indicator_list[0], list):
-            state = [row[feat] for feature in self.tech_indicator_list for feat in feature if feat in row]
+            state = [row.get(feat, 0.0) for feature in self.tech_indicator_list for feat in feature]
         else:
-            state = [row[feat] for feat in self.tech_indicator_list]
+            state = [row.get(feat, 0.0) for feat in self.tech_indicator_list]
             
         # Nối thêm vị thế hiện tại vào cuối mảng state để Neural Network (fc3) có thể lấy ra
         return np.array(state + [self.current_position], dtype=np.float32)
