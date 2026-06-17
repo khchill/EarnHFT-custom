@@ -18,7 +18,7 @@ from env.high_level_env import High_Level_Env
 from RL.util.replay_buffer_DQN import Multi_step_ReplayBuffer_multi_info
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--epochs", type=int, default=80)
+parser.add_argument("--epochs", type=int, default=100)
 parser.add_argument("--hidden_nodes", type=int, default=128)
 parser.add_argument("--batch_size", type=int, default=512)
 parser.add_argument("--lr_init", type=float, default=1e-3)
@@ -96,6 +96,7 @@ class RouterDQN:
             total_loss_epoch = 0
             
             for chunk_file in chunk_files:
+                print(f"High-level Router đang nạp chunk: {os.path.basename(chunk_file)}")
                 df_train = pd.read_feather(chunk_file).bfill().ffill().fillna(0.0)
                 env = High_Level_Env(df_train, tech_indicator_list=self.tech_indicators)
                 

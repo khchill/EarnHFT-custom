@@ -19,7 +19,7 @@ from env.low_level_env import Training_Env, Testing_env
 from RL.util.replay_buffer_DQN import Multi_step_ReplayBuffer_multi_info
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--epochs", type=int, default=100)
+parser.add_argument("--epochs", type=int, default=200)
 parser.add_argument("--seed", type=int, default=12345)
 parser.add_argument("--hidden_nodes", type=int, default=128)
 parser.add_argument("--action_dim", type=int, default=5)
@@ -95,10 +95,11 @@ class PureDQN(object):
         epsilon = self.args.epsilon_init
         
         for epoch in range(epochs):
-            random.shuffle(chunk_files)
             total_reward_epoch = 0
             
-            for chunk_file in chunk_files:
+            sampled_chunk_file = random.choice(chunk_files)
+            for chunk_file in [sampled_chunk_file]:
+                print(f"DQN Baseline đang nạp chunk: {os.path.basename(chunk_file)}")
                 df = pd.read_feather(chunk_file).bfill().ffill().fillna(0.0)
                 env = Training_Env(df, tech_indicators, transcation_cost=self.args.transcation_cost, max_holding_number=self.args.max_holding_number)
                 
@@ -149,7 +150,8 @@ class PureDQN(object):
                         
                         q_eval = self.eval_net(b_states).gather(1, b_actions)
                         with torch.no_grad():
-                            q_next = self.target_net(b_next_states).max(1)[0].unsqueeze(1)
+                            next_eval_actions = self.eval_net(b_next_states).argmax(1).unsqueeze(1)
+                            q_next = self.target_net(b_next_states).gather(1, next_eval_actions)
                             q_target = b_rewards + self.args.gamma * q_next * (1 - b_dones)
                             
                         loss = self.loss_func(q_eval, q_target)

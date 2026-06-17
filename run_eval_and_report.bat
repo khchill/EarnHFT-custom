@@ -1,35 +1,38 @@
 @echo off
-chcp 65001 >nul
-echo === BẮT ĐẦU CHẠY SÀNG LỌC BOT, HUẤN LUYỆN ROUTER VÀ XUẤT BÁO CÁO (WINDOWS) ===
+echo === STARTING BOT EVALUATION, ROUTER TRAINING AND REPORT GENERATION (WINDOWS) ===
 
-:: Đảm bảo sử dụng đúng môi trường ảo Python trên Windows
+:: Ensure using correct Python virtual environment
 set PYTHON_CMD=".venv\Scripts\python.exe"
 
 :: -------------------------------------------------------------
-:: PHẦN 1: Đánh giá Low-level Bots và Huấn luyện High-level Router
+:: PART 1: Low-level Bots Validation and High-level Router Training
 :: -------------------------------------------------------------
-echo [*] 1. Đang chạy Validation cho toàn bộ Model trong Pool...
+echo [*] 1. Running Validation for all Models in Pool...
 %PYTHON_CMD% src\EarnHFT_framwork\tool\run_validation.py
 
-echo [*] 2. Đang sàng lọc Bot giỏi nhất để tạo Ma trận 5x5...
+echo [*] 2. Filtering best Bots to create 5x5 Matrix...
 %PYTHON_CMD% src\EarnHFT_framwork\analysis\pick_agent\pick_agent_position.py
 %PYTHON_CMD% src\EarnHFT_framwork\analysis\pick_agent\inspect_matrix.py
 
-echo [*] 3. Đang huấn luyện High-Level Router (AI Giám đốc)...
+echo [*] 3. Training High-Level Router...
 %PYTHON_CMD% src\EarnHFT_framwork\RL\agent\high_level\dqn_position.py
 
 :: -------------------------------------------------------------
-:: PHẦN 2: Xuất Báo Cáo và Vẽ Đồ Thị
+:: PART 2: Report Generation and Chart Plotting
 :: -------------------------------------------------------------
-echo [*] 4. Đang tính toán Metric và xuất bảng báo cáo so sánh...
+echo [*] 4. Calculating Metrics and generating comparison report...
 %PYTHON_CMD% src\EarnHFT_framwork\analysis\calculate_metric\calculate_metric.py
 
-echo [*] 5. Đang đếm số lượng giao dịch...
+echo [*] 5. Counting number of trades...
 %PYTHON_CMD% count_trades.py
 
-
-echo [*] 7. Đang vẽ biểu đồ Tổng hợp (Graph)...
+echo [*] 6. Plotting comprehensive Graph...
 %PYTHON_CMD% src\EarnHFT_framwork\RL\util\graph.py
 
-echo === HOÀN TẤT TOÀN BỘ QUÁ TRÌNH SÀNG LỌC VÀ BÁO CÁO ===
+
+
+echo [*] 7. Plotting Training Convergence Graph...
+%PYTHON_CMD% src\EarnHFT_framwork\analysis\visualize_convergence.py
+
+echo === COMPLETELY FINISHED EVALUATION AND REPORTING ===
 pause

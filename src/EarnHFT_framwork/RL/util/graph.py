@@ -71,8 +71,10 @@ if __name__ == "__main__":
 
         actions = np.load(act_file, allow_pickle=True)
         # Hỗ trợ High-Level Router: action lưu dạng [n_idx, action_idx]
+        is_high_level = False
         if len(actions.shape) == 2 and actions.shape[1] == 2:
             actions = actions[:, 1]
+            is_high_level = True
         elif len(actions.shape) > 1:
             continue
             
@@ -82,12 +84,23 @@ if __name__ == "__main__":
         
         if "valid" in act_file and valid_df is not None:
             print(f"[{count+1}] Vẽ biểu đồ Validation cho {act_file}...")
-            df_plot = valid_df.iloc[:len(actions)]
+            if is_high_level:
+                df_filtered = valid_df.iloc[::60].reset_index(drop=True)
+                df_plot = df_filtered.iloc[:len(actions)]
+            else:
+                df_plot = valid_df.iloc[:len(actions)]
+                
             get_test_contrast_curve(df_plot.iloc[:PLOT_SIZE], save_path, actions[:PLOT_SIZE])
             count += 1
+            
         elif "test" in act_file and test_df is not None:
             print(f"[{count+1}] Vẽ biểu đồ Test cho {act_file}...")
-            df_plot = test_df.iloc[:len(actions)]
+            if is_high_level:
+                df_filtered = test_df.iloc[::60].reset_index(drop=True)
+                df_plot = df_filtered.iloc[:len(actions)]
+            else:
+                df_plot = test_df.iloc[:len(actions)]
+                
             get_test_contrast_curve(df_plot.iloc[:PLOT_SIZE], save_path, actions[:PLOT_SIZE])
             count += 1
             

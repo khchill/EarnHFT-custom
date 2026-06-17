@@ -71,7 +71,14 @@ def process_and_merge(downloaded_files, date_str):
 
     # order book process
     print("Orderbook processing...")
-    df_ob = pd.read_csv(ob_file)
+    try:
+        df_ob = pd.read_csv(ob_file)
+    except Exception as e:
+        print(f"\n[LỖI] File {ob_file.name} bị hỏng hoặc tải chưa xong (Lỗi: {e}).")
+        print(f"[*] Đang tự động xóa file lỗi... Bạn hãy chạy lại script này lần nữa để tải lại nhé.")
+        ob_file.unlink(missing_ok=True)
+        return None
+
     df_ob['timestamp'] = pd.to_datetime(df_ob['timestamp'], unit='us')
     
     rename_map = {}
@@ -87,7 +94,14 @@ def process_and_merge(downloaded_files, date_str):
     
     # trade process
     print("Trade processing...")
-    df_tr = pd.read_csv(trade_file)
+    try:
+        df_tr = pd.read_csv(trade_file)
+    except Exception as e:
+        print(f"\n[LỖI] File {trade_file.name} bị hỏng hoặc tải chưa xong (Lỗi: {e}).")
+        print(f"[*] Đang tự động xóa file lỗi... Bạn hãy chạy lại script này lần nữa để tải lại nhé.")
+        trade_file.unlink(missing_ok=True)
+        return None
+
     df_tr['timestamp'] = pd.to_datetime(df_tr['timestamp'], unit='us')
     df_tr = df_tr.set_index('timestamp')
     

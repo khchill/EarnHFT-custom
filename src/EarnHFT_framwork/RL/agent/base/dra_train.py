@@ -17,7 +17,7 @@ sys.path.append("./src/EarnHFT_framwork")
 from env.low_level_env import Training_Env, Testing_env
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--epochs", type=int, default=100)
+parser.add_argument("--epochs", type=int, default=200)
 parser.add_argument("--result_path", type=str, default="result_risk")
 parser.add_argument("--batch_size", type=int, default=512)
 parser.add_argument("--mini_batch_size", type=int, default=64)
@@ -112,9 +112,9 @@ class PPO_discrete_RNN:
         os.makedirs(root_dir, exist_ok=True)
         
         for epoch in range(epochs):
-            random.shuffle(chunk_files)
-            
-            for chunk_file in chunk_files:
+            sampled_chunk_file = random.choice(chunk_files)
+            for chunk_file in [sampled_chunk_file]:
+                print(f"DRA Baseline đang nạp chunk: {os.path.basename(chunk_file)}")
                 df = pd.read_feather(chunk_file).bfill().ffill().fillna(0.0)
                 env = Training_Env(df, tech_indicators, transcation_cost=self.args.transcation_cost, max_holding_number=self.args.max_holding_number)
                 

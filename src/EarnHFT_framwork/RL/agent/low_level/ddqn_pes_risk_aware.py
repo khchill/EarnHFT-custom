@@ -30,7 +30,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["F_ENABLE_ONEDNN_OPTS"] = "0"
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--epochs", type=int, default=40)
+parser.add_argument("--epochs", type=int, default=50)
 parser.add_argument("--buffer_size", type=int, default=1000000)
 parser.add_argument("--n_step", type=int, default=1)
 parser.add_argument("--action_dim", type=int, default=5)
@@ -184,6 +184,7 @@ class DQN(object):
         
         for epoch in range(epochs):
             sampled_chunk_file, _, _ = chunk_selector.sample()
+            print(f"Low-level Agent đang nạp chunk: {os.path.basename(sampled_chunk_file)}")
             df = pd.read_feather(sampled_chunk_file).bfill().ffill().fillna(0.0)
             env = Training_Env(df, tech_indicators, transcation_cost=self.args.transcation_cost, max_holding_number=self.args.max_holding_number)
             

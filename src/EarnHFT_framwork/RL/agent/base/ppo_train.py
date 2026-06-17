@@ -18,7 +18,7 @@ sys.path.append("./src/EarnHFT_framwork")
 from env.low_level_env import Testing_env, Training_Env
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--epochs", type=int, default=100)
+parser.add_argument("--epochs", type=int, default=200)
 parser.add_argument("--result_path", type=str, default="result_risk")
 parser.add_argument("--seed", type=int, default=12345)
 parser.add_argument("--action_dim", type=int, default=5)
@@ -107,11 +107,12 @@ class PPO(object):
         os.makedirs(root_dir, exist_ok=True)
         
         for epoch in range(epochs):
-            random.shuffle(chunk_files)
             total_reward_epoch = 0
             loss_val = 0.0
             
-            for chunk_file in chunk_files:
+            sampled_chunk_file = random.choice(chunk_files)
+            for chunk_file in [sampled_chunk_file]:
+                print(f"PPO Baseline đang nạp chunk: {os.path.basename(chunk_file)}")
                 df = pd.read_feather(chunk_file).bfill().ffill().fillna(0.0)
                 env = Training_Env(df, tech_indicators, transcation_cost=self.args.transcation_cost, max_holding_number=self.args.max_holding_number)
                 

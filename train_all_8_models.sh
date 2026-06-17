@@ -1,16 +1,16 @@
 #!/bin/bash
-echo "=== BẮT ĐẦU CHẠY SONG SONG 8 MÔ HÌNH CHO BTCUSDT (4 LOW-LEVEL + 4 BASELINES) ==="
+echo "=== STARTING PARALLEL TRAINING FOR 8 MODELS (4 LOW-LEVEL + 4 BASELINES) ==="
 
 PYTHON_CMD=".venv/bin/python"
 
-# Tạo trước các thư mục log để tránh lỗi bash không tìm thấy đường dẫn ghi file
+# Create log directories
 mkdir -p log/train/BTCUSDT/low_level
 mkdir -p log/base/BTCUSDT
 
 # -------------------------------------------------------------
-# PHẦN 1: TRAIN 4 LOW-LEVEL AGENTS (Khẩu vị rủi ro khác nhau)
+# PART 1: TRAIN 4 LOW-LEVEL AGENTS
 # -------------------------------------------------------------
-echo "[*] Đang khởi động 4 Low-level Agents..."
+echo "[*] Starting 4 Low-level Agents..."
 CUDA_VISIBLE_DEVICES=0 nohup $PYTHON_CMD src/EarnHFT_framwork/RL/agent/low_level/ddqn_pes_risk_aware.py \
     --beta 100 --train_data_path data/cleaned_data/BTCUSDT/tardis/train --dataset_name BTCUSDT \
     >log/train/BTCUSDT/low_level/beta_100.log 2>&1 &
@@ -29,30 +29,30 @@ CUDA_VISIBLE_DEVICES=0 nohup $PYTHON_CMD src/EarnHFT_framwork/RL/agent/low_level
 
 
 # -------------------------------------------------------------
-# PHẦN 2: TRAIN 4 BASELINES AGENTS (Các đối thủ độc lập)
+# PART 2: TRAIN 4 BASELINES AGENTS
 # -------------------------------------------------------------
-echo "[*] Đang khởi động 4 Baseline Agents..."
+echo "[*] Starting 4 Baseline Agents..."
 # Baseline 1: CDQN-RP
 CUDA_VISIBLE_DEVICES=0 nohup $PYTHON_CMD src/EarnHFT_framwork/RL/agent/base/cdqn_train.py \
     --dataset_name BTCUSDT --train_data_path data/cleaned_data/BTCUSDT/tardis/train --transcation_cost 0.00015 --max_holding_number 0.01 \
     >log/base/BTCUSDT/train_cdqn_rp.log 2>&1 &
 
-# Baseline 2: DQN (Sử dụng ada_init 0)
+# Baseline 2: DQN
 CUDA_VISIBLE_DEVICES=0 nohup $PYTHON_CMD src/EarnHFT_framwork/RL/agent/base/dqn_train.py \
     --dataset_name BTCUSDT --train_data_path data/cleaned_data/BTCUSDT/tardis/train --transcation_cost 0.00015 --max_holding_number 0.01 --ada_init 0 \
     >log/base/BTCUSDT/train_dqn_0.log 2>&1 &
 
-# Baseline 3: DRA (Dùng PPO + LSTM)
+# Baseline 3: DRA
 CUDA_VISIBLE_DEVICES=0 nohup $PYTHON_CMD src/EarnHFT_framwork/RL/agent/base/dra_train.py \
     --dataset_name BTCUSDT --train_data_path data/cleaned_data/BTCUSDT/tardis/train --transcation_cost 0.00015 --max_holding_number 0.01 \
     >log/base/BTCUSDT/train_dra_short.log 2>&1 &
 
-# Baseline 4: PPO thuần
+# Baseline 4: PPO
 CUDA_VISIBLE_DEVICES=0 nohup $PYTHON_CMD src/EarnHFT_framwork/RL/agent/base/ppo_train.py \
     --dataset_name BTCUSDT --train_data_path data/cleaned_data/BTCUSDT/tardis/train --transcation_cost 0.00015 --max_holding_number 0.01 \
     >log/base/BTCUSDT/train_ppo.log 2>&1 &
 
-echo "[!] Hệ thống đang huấn luyện đồng thời 8 mô hình trên GPU 0."
-echo "[!] Vui lòng dùng lệnh 'htop' (để kiểm tra CPU/RAM) và 'nvidia-smi' (để xem VRAM)."
+echo "[!] System is training 8 models simultaneously on GPU 0."
+echo "[!] Use 'htop' to check CPU/RAM and 'nvidia-smi' to check VRAM."
 wait
-echo "[+] HOÀN TẤT TRAIN TOÀN BỘ 8 MÔ HÌNH CHO ĐỒNG BTCUSDT!"
+echo "[+] DONE TRAINING ALL 8 MODELS!"

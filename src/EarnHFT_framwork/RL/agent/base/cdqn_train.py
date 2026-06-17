@@ -24,7 +24,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["F_ENABLE_ONEDNN_OPTS"] = "0"
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--epochs", type=int, default=100)
+parser.add_argument("--epochs", type=int, default=200)
 parser.add_argument("--buffer_size", type=int, default=1000000) 
 parser.add_argument("--n_step", type=int, default=1)
 parser.add_argument("--action_dim", type=int, default=5)
@@ -140,10 +140,11 @@ class CDQN_rp(object):
 
         # load qua epoch randomly shuffle chunk file
         for epoch in range(epochs):
-            random.shuffle(chunk_files)
             total_reward_epoch = 0
             
-            for chunk_file in chunk_files:
+            sampled_chunk_file = random.choice(chunk_files)
+            for chunk_file in [sampled_chunk_file]:
+                print(f"CDQN Baseline đang nạp chunk: {os.path.basename(chunk_file)}")
                 df = pd.read_feather(chunk_file).bfill().ffill().fillna(0.0)
                 env = Training_Env(df, tech_indicators, transcation_cost=self.args.transcation_cost, max_holding_number=self.args.max_holding_number)
                 
