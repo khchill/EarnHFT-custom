@@ -8,6 +8,9 @@ import torch
 import torch.nn as nn
 import glob
 
+# Tối ưu hoá luồng CPU cho mô hình Router (chạy độc lập)
+torch.set_num_threads(4)
+
 sys.path.append(".")
 sys.path.append("src")
 sys.path.append("src/EarnHFT_framwork")

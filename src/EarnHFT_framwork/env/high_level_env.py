@@ -46,7 +46,8 @@ class High_Level_Env:
                         net = Qnet(state_dim, action_dim, hidden_nodes=128)
                         net.load_state_dict(torch.load(path, map_location="cpu"))
                         net.eval()
-                        High_Level_Env._MODEL_CACHE[(n_idx, m_idx)] = net
+                        # Biên dịch mô hình sang TorchScript để tối ưu hoá Inference 
+                        High_Level_Env._MODEL_CACHE[(n_idx, m_idx)] = torch.jit.script(net)
                     else:
                         High_Level_Env._MODEL_CACHE[(n_idx, m_idx)] = None
                         
@@ -120,8 +121,13 @@ class High_Level_Env:
                         
                     p_curr = prices[step_sec]
                     p_nxt = prices[step_sec + 1] if step_sec + 1 < 60 else price_next
-                    # Phải tính cả sự thay đổi của tiền mặt (cash flow) khi mua/bán.
-                    sec_reward = current_bot_pos * (p_nxt - p_curr)
+                    
+                    # Tính phí giao dịch (Transaction Fee) khi thay đổi vị thế
+                    pos_change = abs(current_bot_pos - prev_bot_pos)
+                    fee_cost = pos_change * p_curr * self.transcation_cost
+                    
+                    # Tính Lãi/Lỗ thực tế = Lãi/Lỗ danh nghĩa - Phí giao dịch
+                    sec_reward = current_bot_pos * (p_nxt - p_curr) - fee_cost
                     step_rewards.append(sec_reward)
                 
                 next_position = current_bot_pos
@@ -135,6 +141,10 @@ class High_Level_Env:
             next_position = self.position
             self.second_rewards_history.extend([0.0] * 60)
             
-        reward = (next_position * price_next) - (self.position * price_current)
+        # Tổng reward của Agent cấp cao phải bao gồm cả phí giao dịch Macro
+        pos_change_high_level = abs(next_position - self.position)
+        high_level_fee = pos_change_high_level * price_current * self.transcation_cost
+        
+        reward = (next_position * price_next) - (self.position * price_current) - high_level_fee
         self.position = next_position
         return self._get_state(), reward, self.done, {}
