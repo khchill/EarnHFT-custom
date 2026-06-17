@@ -5,6 +5,8 @@ import pandas as pd
 from model.net import Qnet
 
 class High_Level_Env:
+    _MODEL_CACHE = None
+
     def __init__(self, df, tech_indicator_list, bot_pool_size=5, model_dir="result_risk/BTCUSDT/potential_model"):
         self.df = df 
         self.tech_indicator_list = tech_indicator_list
@@ -17,6 +19,23 @@ class High_Level_Env:
         self.positions_pool = [0.0, 0.0025, 0.005, 0.0075, 0.01]
         self.require_money = 10000.0
         self.second_rewards_history = []
+        
+        if High_Level_Env._MODEL_CACHE is None:
+            High_Level_Env._MODEL_CACHE = {}
+            state_dim = 55
+            action_dim = 5
+            for n_idx in range(5):
+                for m_idx in range(5):
+                    path = os.path.join(self.model_dir, f"initial_action_{n_idx}", f"model_{m_idx}.pth")
+                    if os.path.exists(path):
+                        net = Qnet(state_dim, action_dim, hidden_nodes=128)
+                        net.load_state_dict(torch.load(path, map_location="cpu"))
+                        net.eval()
+                        High_Level_Env._MODEL_CACHE[(n_idx, m_idx)] = net
+                    else:
+                        High_Level_Env._MODEL_CACHE[(n_idx, m_idx)] = None
+                        
+        self.bots_matrix = High_Level_Env._MODEL_CACHE
 
     def reset(self):
         self.current_step = 0
@@ -54,14 +73,10 @@ class High_Level_Env:
         model_path = os.path.join(self.model_dir, f"initial_action_{n_idx}", f"model_{m_idx}.pth")
         next_position = self.position
         
-        if os.path.exists(model_path):
+        net = self.bots_matrix.get((n_idx, m_idx), None)
+        
+        if net is not None:
             try:
-                state_dim = 55
-                action_dim = 5
-                net = Qnet(state_dim, action_dim, hidden_nodes=128)
-                net.load_state_dict(torch.load(model_path, map_location="cpu"))
-                net.eval()
-                
                 # Gia lap 60 giay giao dich cua bot
                 prices = np.linspace(price_current, price_next, 60)
                 current_bot_pos = self.position
