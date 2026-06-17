@@ -83,8 +83,18 @@ class High_Level_Env:
                 step_rewards = []
                 
                 for step_sec in range(60):
-                    # Data 1 giây (ở đây framework đang dùng random noise làm placeholder cho dữ liệu tần suất cao)
-                    bot_state = np.random.randn(54).tolist() + [current_bot_pos]
+                    current_sec_idx = self.current_step + step_sec
+                    
+                    if current_sec_idx < len(self.df):
+                        row_sec = self.df.iloc[current_sec_idx]
+                        real_features = [row_sec[feat] for feat in self.tech_indicator_list if feat in row_sec]
+                    else:
+                        real_features = []
+                        
+                    if not real_features:
+                        real_features = np.random.randn(54).tolist()
+                        
+                    bot_state = real_features + [current_bot_pos]
                     bot_state_tensor = torch.FloatTensor(bot_state).unsqueeze(0)
                     with torch.no_grad():
                         q_values = net(bot_state_tensor)
