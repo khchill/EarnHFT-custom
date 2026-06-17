@@ -22,6 +22,19 @@ class High_Level_Env:
         self.require_money = 10000.0
         self.second_rewards_history = []
         
+        # Tối ưu hoá truy xuất dữ liệu: Ép kiểu sang Numpy arrays
+        missing_high = [feat for feat in self.high_level_features if feat not in self.df.columns]
+        for feat in missing_high:
+            self.df[feat] = 0.0
+        self.high_level_array = self.df[self.high_level_features].values
+        
+        missing_low = [feat for feat in self.low_level_features if feat not in self.df.columns]
+        for feat in missing_low:
+            self.df[feat] = 0.0
+        self.low_level_array = self.df[self.low_level_features].values
+        
+        self.price_close_array = self.df.get('close', pd.Series(1000.0, index=self.df.index)).values
+        
         if High_Level_Env._MODEL_CACHE is None:
             High_Level_Env._MODEL_CACHE = {}
             state_dim = len(self.low_level_features) + 1
@@ -47,10 +60,7 @@ class High_Level_Env:
         return self._get_state(), {}
 
     def _get_state(self):
-        row = self.df.iloc[self.current_step]
-        state = [row.get(feat, 0.0) for feat in self.high_level_features]
-        if not state:
-            state = np.zeros(len(self.high_level_features)).tolist()
+        state = self.high_level_array[self.current_step].tolist()
         return np.array(state + [self.position], dtype=np.float32)
 
     def step(self, action_idx):
@@ -60,17 +70,14 @@ class High_Level_Env:
         # Tim chi so vi the n_idx tuong ung trong ma tran
         n_idx = np.argmin(np.abs(np.array(self.positions_pool) - self.position))
         
-        row_current = self.df.iloc[self.current_step]
+        price_current = self.price_close_array[self.current_step]
         
         self.current_step += 60
         if self.current_step >= len(self.df) - 1:
             self.done = True
             self.current_step = len(self.df) - 2
             
-        row_next = self.df.iloc[self.current_step]
-        
-        price_current = row_current.get('close', 1000.0)
-        price_next = row_next.get('close', 1005.0)
+        price_next = self.price_close_array[self.current_step]
         
         model_path = os.path.join(self.model_dir, f"initial_action_{n_idx}", f"model_{m_idx}.pth")
         next_position = self.position
@@ -84,16 +91,15 @@ class High_Level_Env:
                 current_bot_pos = self.position
                 step_rewards = []
                 
+                # Lấy data đúng từ phút hiện tại (T đến T+1) thay vì nhảy sang T+1 đến T+2
+                start_sec_idx = self.current_step - 60
+                
                 for step_sec in range(60):
-                    current_sec_idx = self.current_step + step_sec
+                    current_sec_idx = start_sec_idx + step_sec
                     
                     if current_sec_idx < len(self.df):
-                        row_sec = self.df.iloc[current_sec_idx]
-                        real_features = [row_sec.get(feat, 0.0) for feat in self.low_level_features]
+                        real_features = self.low_level_array[current_sec_idx].tolist()
                     else:
-                        real_features = []
-                        
-                    if not real_features:
                         real_features = np.zeros(len(self.low_level_features)).tolist()
                         
                     bot_state = real_features + [current_bot_pos]

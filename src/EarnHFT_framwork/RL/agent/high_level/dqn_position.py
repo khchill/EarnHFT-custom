@@ -27,6 +27,7 @@ parser.add_argument("--gamma", type=float, default=0.99)
 parser.add_argument("--reward_scale", type=float, default=30.0)
 parser.add_argument("--seed", type=int, default=12345)
 parser.add_argument("--dataset_name", type=str, default="BTCUSDT")
+parser.add_argument("--model_dir", type=str, default="result_risk/BTCUSDT/potential_model")
 
 def seed_torch(seed):
     random.seed(seed)

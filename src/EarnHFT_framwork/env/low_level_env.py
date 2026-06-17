@@ -13,6 +13,28 @@ class Training_Env:
         self.position_space = [i * (max_holding_number / (action_dim - 1)) for i in range(action_dim)]
         
         self.step_length = len(self.df)
+        
+        # Tối ưu hoá: Ép kiểu sang Numpy arrays
+        flat_tech_list = []
+        if len(self.tech_indicator_list) > 0 and isinstance(self.tech_indicator_list[0], list):
+            for feature in self.tech_indicator_list:
+                for feat in feature:
+                    flat_tech_list.append(feat)
+        else:
+            flat_tech_list = self.tech_indicator_list
+            
+        for feat in flat_tech_list:
+            if feat not in self.df.columns:
+                self.df[feat] = 0.0
+                
+        self.tech_indicator_array = self.df[flat_tech_list].values
+        
+        # Pre-extract LOB columns
+        self.ask_prices = np.array([self.df.get(f'ask{i}_price', pd.Series(0.0, index=self.df.index)).values for i in range(1, 11)]).T
+        self.ask_sizes = np.array([self.df.get(f'ask{i}_size', pd.Series(0.0, index=self.df.index)).values for i in range(1, 11)]).T
+        self.bid_prices = np.array([self.df.get(f'bid{i}_price', pd.Series(0.0, index=self.df.index)).values for i in range(1, 11)]).T
+        self.bid_sizes = np.array([self.df.get(f'bid{i}_size', pd.Series(0.0, index=self.df.index)).values for i in range(1, 11)]).T
+        
         self.initial_action = initial_action
         self.reset()
 
@@ -31,15 +53,8 @@ class Training_Env:
         return state, info
 
     def _get_state(self):
-        # Input cho mạng Nơ-ron 54 idicators + 1 position
-        row = self.df.iloc[self.current_step]
-
-        if len(self.tech_indicator_list) > 0 and isinstance(self.tech_indicator_list[0], list):
-            state = [row.get(feat, 0.0) for feature in self.tech_indicator_list for feat in feature]
-        else:
-            state = [row.get(feat, 0.0) for feat in self.tech_indicator_list]
-            
-        # Nối thêm vị thế hiện tại vào cuối mảng state để Neural Network (fc3) có thể lấy ra
+        # Input cho mạng Nơ-ron
+        state = self.tech_indicator_array[self.current_step].tolist()
         return np.array(state + [self.current_position], dtype=np.float32)
 
     def _execute_order(self, target_position, step_idx):
@@ -49,9 +64,9 @@ class Training_Env:
         
         if M > 0: # LỆNH MUA (Mua thì tiền bị trừ cash_flow âm)
             remaining = M
-            for i in range(1, 11):
-                price = self.df.iloc[step_idx][f'ask{i}_price']
-                size = self.df.iloc[step_idx][f'ask{i}_size']
+            for i in range(10):
+                price = self.ask_prices[step_idx, i]
+                size = self.ask_sizes[step_idx, i]
                 executed = min(remaining, size)
                 
                 # Tính tiền mua + phí giao dịch  
@@ -62,13 +77,13 @@ class Training_Env:
                     
             # Nếu thanh khoản 10 mốc không đủ ép khớp nốt lượng dư ở mốc xấu nhất (mốc 10)
             if remaining > 0:
-                cash_flow -= remaining * self.df.iloc[step_idx]['ask10_price'] * (1 + self.transcation_cost)
+                cash_flow -= remaining * self.ask_prices[step_idx, 9] * (1 + self.transcation_cost)
                 
         elif M < 0: # LỆNH BÁN (Bán thì thu tiền về ->cash_flow dương)
             remaining = -M
-            for i in range(1, 11):
-                price = self.df.iloc[step_idx][f'bid{i}_price']
-                size = self.df.iloc[step_idx][f'bid{i}_size']
+            for i in range(10):
+                price = self.bid_prices[step_idx, i]
+                size = self.bid_sizes[step_idx, i]
                 executed = min(remaining, size)
                 
                 # Tính tiền bán + trừ phí 
@@ -78,7 +93,7 @@ class Training_Env:
                     break
                     
             if remaining > 0:
-                cash_flow += remaining * self.df.iloc[step_idx]['bid10_price'] * (1 - self.transcation_cost)
+                cash_flow += remaining * self.bid_prices[step_idx, 9] * (1 - self.transcation_cost)
                 
         return cash_flow
 
@@ -92,7 +107,7 @@ class Training_Env:
         self.current_position = target_position
         
         # B2: Lưu lại giá Bid ở giây hiện tại để tính reward
-        current_bid1 = self.df.iloc[self.current_step]['bid1_price']
+        current_bid1 = self.bid_prices[self.current_step, 0]
         
         # B3: Cập nhật thông tin
         if action == self.previous_action:
@@ -107,7 +122,7 @@ class Training_Env:
         
         # B5: Tính toán reward
         if not done:
-            next_bid1 = self.df.iloc[self.current_step]['bid1_price']
+            next_bid1 = self.bid_prices[self.current_step, 0]
             # reward = [Giá trị Vị thế mới ở giây t+1] - [Giá trị Vị thế cũ ở giây t] + [Dòng tiền vừa thay đổi]
             reward = self.current_position * next_bid1 - old_position * current_bid1 + cash_flow
             next_state = self._get_state()
