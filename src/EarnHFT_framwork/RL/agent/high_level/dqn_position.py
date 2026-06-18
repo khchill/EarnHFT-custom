@@ -8,7 +8,6 @@ import torch
 import torch.nn as nn
 import glob
 
-# Tối ưu hoá luồng CPU cho mô hình Router (chạy độc lập)
 torch.set_num_threads(4)
 
 sys.path.append(".")
@@ -62,7 +61,7 @@ class RouterDQN:
             print("cảnh báo: không tìm thấy 2 file feature chuẩn (chưa chạy pipeline?). Đang tải fallback...")
             feature_path_old = "data/cleaned_data/BTCUSDT/tardis/feature_list.npy"
             fallback_features = np.load(feature_path_old, allow_pickle=True).tolist()
-            self.high_level_features = fallback_features[:19] # lay 19 thang dau tien
+            self.high_level_features = fallback_features[:19] # lay 19 feature
             self.low_level_features = fallback_features
             
         self.state_dim = len(self.high_level_features) + 1 

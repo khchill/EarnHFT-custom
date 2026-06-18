@@ -80,7 +80,7 @@ if __name__ == "__main__":
             if best_model and os.path.exists(best_model):
                 dest_file = os.path.join(pos_dir, f"model_{m_idx}.pth")
                 shutil.copy2(best_model, dest_file)
-                match = re.search(r"beta_(-?[\d\.]+)/seed_12345/epoch_(\d+)", best_model)
+                match = re.search(r"beta_(-?[\d\.]+)[\\/]seed_12345[\\/]epoch_(\d+)", best_model)
                 if match:
                     beta_val, epoch_val = match.group(1), match.group(2)
                     matrix_cells[n_idx][m_idx] = f"B:{beta_val}/E:{epoch_val}"

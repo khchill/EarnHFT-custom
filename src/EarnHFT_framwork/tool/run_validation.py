@@ -17,7 +17,7 @@ from multiprocessing import cpu_count
 def process_file_task(args):
     model_file, valid_data_dir, df_file, epoch_path, label, initial_actions, tech_indicators = args
     
-    # Load model once per worker task
+    # load model 
     model = Qnet(N_STATES=len(tech_indicators) + 1, N_ACTIONS=5, hidden_nodes=128)
     try:
         model.load_state_dict(torch.load(model_file))
@@ -32,7 +32,7 @@ def process_file_task(args):
         target_dir = os.path.join(epoch_path, "valid_multi", label, init_act, df_file)
         os.makedirs(target_dir, exist_ok=True)
         
-        # Bỏ qua nếu đã lưu (giúp resume nhanh khi chạy lại)
+        # bỏ qua nếu đã lưu 
         if os.path.exists(os.path.join(target_dir, "final_balance.npy")):
             continue
             
@@ -56,10 +56,7 @@ def process_file_task(args):
     return f"Done: {os.path.basename(epoch_path)} - {label} - {df_file}"
 
 def main():
-    print("=" * 60)
-    print("BAT DAU CHAY DANH GIA MODEL (PARALLEL MODE)")
-    print("=" * 60)
-    
+
     root_path = "result_risk/BTCUSDT"
     if not os.path.exists(root_path):
         print("chua co kq train dau, check lai nha")
@@ -108,9 +105,9 @@ def main():
     total_tasks = len(tasks)
     print(f"Tổng số lượng task cần chạy: {total_tasks}")
     
-    # Chay song song bang ProcessPoolExecutor
-    num_workers = max(1, cpu_count() - 1)  # Giu lai 1 core cho OS
-    print(f"Sử dụng {num_workers} tiến trình song song...")
+    # chạy cố định 4 core
+    num_workers = 4
+    print(f"sử dụng  {num_workers} cores song song...")
     
     completed = 0
     with ProcessPoolExecutor(max_workers=num_workers) as executor:
@@ -121,7 +118,7 @@ def main():
             if completed % 50 == 0 or completed == total_tasks:
                 print(f"Tiến độ: {completed}/{total_tasks} | {result}")
 
-    print("\nXONG DANH GIA MODEL")
+    print("\n xong chạy valid low-level bot qua multi-valid")
 
 if __name__ == "__main__":
     main()
