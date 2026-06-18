@@ -21,6 +21,8 @@ class High_Level_Env:
         self.positions_pool = [0.0, 0.0025, 0.005, 0.0075, 0.01]
         self.require_money = 10000.0
         self.second_rewards_history = []
+        self.transcation_cost = 0.00015 # Thêm biến tính phí sàn
+
         
         # Tối ưu hoá truy xuất dữ liệu: Ép kiểu sang Numpy arrays
         missing_high = [feat for feat in self.high_level_features if feat not in self.df.columns]
