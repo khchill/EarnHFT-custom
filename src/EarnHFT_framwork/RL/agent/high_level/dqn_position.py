@@ -216,7 +216,7 @@ class RouterDQN:
                     all_rewards, all_require_money, all_actions = [], [], []
                     for test_file in test_files:
                         df_test = pd.read_feather(test_file).bfill().ffill().fillna(0.0)
-                        test_env = High_Level_Env(df_test, tech_indicator_list=self.tech_indicators)
+                        test_env = High_Level_Env(df_test, self.high_level_features, self.low_level_features, model_dir=self.args.model_dir)
                         state, _ = test_env.reset()
                         done = False
                         
