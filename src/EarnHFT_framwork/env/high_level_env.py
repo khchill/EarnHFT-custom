@@ -112,14 +112,7 @@ class High_Level_Env:
                         bot_action = torch.argmax(q_values).item()
                     
                     prev_bot_pos = current_bot_pos
-                    if bot_action == 1:
-                        current_bot_pos = min(0.01, current_bot_pos + 0.0025)
-                    elif bot_action == 2:
-                        current_bot_pos = min(0.01, current_bot_pos + 0.005)
-                    elif bot_action == 3:
-                        current_bot_pos = max(0.0, current_bot_pos - 0.0025)
-                    elif bot_action == 4:
-                        current_bot_pos = max(0.0, current_bot_pos - 0.005)
+                    current_bot_pos = self.positions_pool[bot_action]
                         
                     p_curr = prices[step_sec]
                     p_nxt = prices[step_sec + 1] if step_sec + 1 < 60 else price_next
