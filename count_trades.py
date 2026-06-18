@@ -22,15 +22,15 @@ def get_best_epoch_action_path(model_root, mode="test"):
     """
     if "rule_base" in model_root:
         path = os.path.join(model_root, mode, "action.npy")
-        return path if os.path.exists(path) else None
+        return (path, None) if os.path.exists(path) else (None, None)
 
     # RL agents
     if not os.path.exists(model_root):
-        return None
+        return (None, None)
     
     epoch_dirs = [d for d in os.listdir(model_root) if d.startswith("epoch_")]
     if not epoch_dirs:
-        return None
+        return (None, None)
         
     best_epoch = None
     best_reward = -float("inf")
@@ -46,15 +46,20 @@ def get_best_epoch_action_path(model_root, mode="test"):
                 best_epoch = ep
                 
     if best_epoch is None:
-        best_epoch = "epoch_1"
+        try:
+            # Sắp xếp các thư mục epoch theo số thứ tự (epoch_1, epoch_10,...) và lấy cái cuối cùng
+            epoch_dirs.sort(key=lambda x: int(x.split('_')[1]))
+            best_epoch = epoch_dirs[-1]
+        except:
+            best_epoch = "epoch_1"
         
     path = os.path.join(model_root, best_epoch, mode, "action.npy")
-    return path if os.path.exists(path) else None
+    return (path, best_epoch) if os.path.exists(path) else (None, None)
 
 models_to_check = {
     "Imbalance Volume (IV)": "result_risk/BTCUSDT/rule_base/IV",
     "MACD": "result_risk/BTCUSDT/rule_base/MACD",
-    "DQN": "result_risk/BTCUSDT/dqn_ada_0/seed_12345",
+    "DQN": "result_risk/BTCUSDT/dqn_ada_0.0/seed_12345",
     "CDQN-RP": "result_risk/BTCUSDT/cdqn_rp/seed_12345",
     "PPO": "result_risk/BTCUSDT/ppo/seed_12345",
     "DRA": "result_risk/BTCUSDT/dra_short/seed_12345",
@@ -64,14 +69,15 @@ models_to_check = {
 for mode in ["valid", "test"]:
     print(f"========== TRADE COUNT ({mode.upper()}) ==========")
     for model_name, root_path in models_to_check.items():
-        path = get_best_epoch_action_path(root_path, mode=mode)
+        path, best_epoch = get_best_epoch_action_path(root_path, mode=mode)
         if path is None:
             print(f"{model_name:28s} | Chưa có dữ liệu (Chưa chạy {mode} hoặc chưa lưu mảng action)")
             continue
             
         trades, total, actions = calculate_trades(path)
         if trades != -1:
-            print(f"{model_name:28s} | Số lần trades: {trades:5d} / {total} ticks")
+            epoch_info = f" (từ {best_epoch})" if best_epoch else ""
+            print(f"{model_name:28s} | Số lần trades: {trades:5d} / {total} ticks{epoch_info}")
             
             # Thống kê chi tiết 25 bot cho High-Level Router
             if model_name == "EarnHFT (High-Level Router)" and len(actions.shape) == 2:

@@ -118,7 +118,7 @@ def main():
             if completed % 50 == 0 or completed == total_tasks:
                 print(f"Tiến độ: {completed}/{total_tasks} | {result}")
 
-    print("\n xong chạy valid low-level bot qua multi-valid")
+    print("\n xong chạy valid low-level bot qua multi-valid dataset")
 
 if __name__ == "__main__":
     main()
