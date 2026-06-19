@@ -179,8 +179,8 @@ class DQN(object):
         epochs = self.args.epochs
         total_steps = 0
         
-        # Thư mục lưu kết quả ứng với Bot Beta
-        root_dir = f"{self.args.result_path}/BTCUSDT/beta_{self.beta}/seed_{self.seed}"
+        # Thư mục lưu kết quả ứng với Bot Beta (Chỉ Self-play + KL)
+        root_dir = f"{self.args.result_path}/BTCUSDT/only_selfplay_kl_beta_{self.beta}/seed_{self.seed}"
         
         for epoch in range(epochs):
             sampled_chunk_file, _, _ = chunk_selector.sample()
@@ -209,14 +209,11 @@ class DQN(object):
                 
                 epsilon = max(self.args.epsilon_min, self.args.epsilon_init - (total_steps / self.args.epsilon_step) * (self.args.epsilon_init - self.args.epsilon_min))
                 
-                if epoch % 2 == 1:
-                    action_idx = int(np.argmax(teacher_q_values))
+                if np.random.rand() < epsilon:
+                    action_idx = np.random.randint(0, self.args.action_dim)
                 else:
-                    if np.random.rand() < epsilon:
-                        action_idx = np.random.randint(0, self.args.action_dim)
-                    else:
-                        with torch.no_grad():
-                            action_idx = torch.argmax(q_eval).item()
+                    with torch.no_grad():
+                        action_idx = torch.argmax(q_eval).item()
                 
                 next_state, reward, done, _ = env.step(action_idx)
                 

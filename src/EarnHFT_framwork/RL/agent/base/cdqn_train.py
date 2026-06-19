@@ -18,13 +18,14 @@ from model.net import *
 from env.low_level_env import Training_Env, Testing_env
 from RL.util.replay_buffer_DQN import Multi_step_ReplayBuffer_multi_info
 
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "3"
+os.environ["NUMEXPR_NUM_THREADS"] = "3"
+os.environ["OMP_NUM_THREADS"] = "3"
 os.environ["F_ENABLE_ONEDNN_OPTS"] = "0"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--epochs", type=int, default=200)
+parser.add_argument("--resume_epoch", type=int, default=0)
 parser.add_argument("--buffer_size", type=int, default=1000000) 
 parser.add_argument("--n_step", type=int, default=1)
 parser.add_argument("--action_dim", type=int, default=5)
@@ -139,7 +140,20 @@ class CDQN_rp(object):
         epsilon = self.args.epsilon_init
 
         # load qua epoch randomly shuffle chunk file
-        for epoch in range(epochs):
+        root_dir = f"{self.args.result_path}/BTCUSDT/cdqn_rp/seed_{self.seed}"
+        start_epoch = 0
+        if self.args.resume_epoch > 0:
+            start_epoch = self.args.resume_epoch
+            resume_dir = os.path.join(root_dir, f"epoch_{start_epoch}")
+            if os.path.exists(resume_dir):
+                print(f"RESUMING from {resume_dir}...")
+                self.eval_net.load_state_dict(torch.load(os.path.join(resume_dir, "model.pth")))
+                self.target_net.load_state_dict(self.eval_net.state_dict())
+            else:
+                print(f"Cannot find resume directory {resume_dir}, starting from 0.")
+                start_epoch = 0
+
+        for epoch in range(start_epoch, epochs):
             total_reward_epoch = 0
             
             sampled_chunk_file = random.choice(chunk_files)

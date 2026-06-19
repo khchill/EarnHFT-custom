@@ -53,9 +53,8 @@ class Training_Env:
         return state, info
 
     def _get_state(self):
-        # Input cho mạng Nơ-ron
-        state = self.tech_indicator_array[self.current_step].tolist()
-        return np.array(state + [self.current_position], dtype=np.float32)
+        # Input cho mạng Nơ-ron (Loại bỏ overhead tolist và list concatenation)
+        return np.append(self.tech_indicator_array[self.current_step], self.current_position).astype(np.float32)
 
     def _execute_order(self, target_position, step_idx):
         # Mô phỏng Khớp lệnh trên Sổ lệnh 5 mốc giá (Limit Order Book)

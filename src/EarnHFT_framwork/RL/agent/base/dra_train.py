@@ -1,8 +1,8 @@
 import sys
 import os
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "2"
+os.environ["NUMEXPR_NUM_THREADS"] = "2"
+os.environ["OMP_NUM_THREADS"] = "2"
 os.environ["F_ENABLE_ONEDNN_OPTS"] = "0"
 import random
 import argparse
@@ -22,6 +22,7 @@ from env.low_level_env import Training_Env, Testing_env
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--epochs", type=int, default=200)
+parser.add_argument("--resume_epoch", type=int, default=0)
 parser.add_argument("--result_path", type=str, default="result_risk")
 parser.add_argument("--batch_size", type=int, default=512)
 parser.add_argument("--mini_batch_size", type=int, default=64)
@@ -29,7 +30,7 @@ parser.add_argument("--hidden_nodes", type=int, default=128)
 parser.add_argument("--lr_init", type=float, default=5e-5)
 parser.add_argument("--lr_min", type=float, default=1e-5)
 parser.add_argument("--lr_step", type=float, default=1e6)
-parser.add_argument("--gamma", type=float, default=1) 
+parser.add_argument("--gamma", type=float, default=0.99)
 parser.add_argument("--lamda", type=float, default=0.95)
 parser.add_argument("--epsilon", type=float, default=0.2)
 parser.add_argument("--K_epochs", type=int, default=1) 
@@ -115,7 +116,18 @@ class PPO_discrete_RNN:
         root_dir = os.path.join(self.args.result_path, self.args.dataset_name, "dra_short", f"seed_{self.seed}")
         os.makedirs(root_dir, exist_ok=True)
         
-        for epoch in range(epochs):
+        start_epoch = 0
+        if self.args.resume_epoch > 0:
+            start_epoch = self.args.resume_epoch
+            resume_dir = os.path.join(root_dir, f"epoch_{start_epoch}")
+            if os.path.exists(resume_dir):
+                print(f"RESUMING from {resume_dir}...")
+                model.load_state_dict(torch.load(os.path.join(resume_dir, "model.pth")))
+            else:
+                print(f"Cannot find resume directory {resume_dir}, starting from 0.")
+                start_epoch = 0
+        
+        for epoch in range(start_epoch, epochs):
             sampled_chunk_file = random.choice(chunk_files)
             for chunk_file in [sampled_chunk_file]:
                 print(f"DRA Baseline đang nạp chunk: {os.path.basename(chunk_file)}")

@@ -105,9 +105,9 @@ def main():
     total_tasks = len(tasks)
     print(f"Tổng số lượng task cần chạy: {total_tasks}")
     
-    # chạy cố định 4 core
-    num_workers = 4
-    print(f"sử dụng  {num_workers} cores song song...")
+    # chạy cố định 6 core
+    num_workers = 6
+    print(f"sử dụng {num_workers} cores song song...")
     
     completed = 0
     with ProcessPoolExecutor(max_workers=num_workers) as executor:

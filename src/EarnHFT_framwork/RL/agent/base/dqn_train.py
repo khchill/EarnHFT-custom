@@ -1,8 +1,8 @@
 import sys
 import os
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "3"
+os.environ["NUMEXPR_NUM_THREADS"] = "3"
+os.environ["OMP_NUM_THREADS"] = "3"
 os.environ["F_ENABLE_ONEDNN_OPTS"] = "0"
 import random
 import argparse
@@ -24,6 +24,7 @@ from RL.util.replay_buffer_DQN import Multi_step_ReplayBuffer_multi_info
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--epochs", type=int, default=200)
+parser.add_argument("--resume_epoch", type=int, default=0)
 parser.add_argument("--seed", type=int, default=12345)
 parser.add_argument("--hidden_nodes", type=int, default=128)
 parser.add_argument("--action_dim", type=int, default=5)
@@ -98,7 +99,20 @@ class PureDQN(object):
         total_steps = 0
         epsilon = self.args.epsilon_init
         
-        for epoch in range(epochs):
+        root_dir = f"{self.args.result_path}/BTCUSDT/dqn_ada_{self.args.ada_init}/seed_{self.seed}"
+        start_epoch = 0
+        if self.args.resume_epoch > 0:
+            start_epoch = self.args.resume_epoch
+            resume_dir = os.path.join(root_dir, f"epoch_{start_epoch}")
+            if os.path.exists(resume_dir):
+                print(f"RESUMING from {resume_dir}...")
+                self.eval_net.load_state_dict(torch.load(os.path.join(resume_dir, "model.pth")))
+                self.target_net.load_state_dict(self.eval_net.state_dict())
+            else:
+                print(f"Cannot find resume directory {resume_dir}, starting from 0.")
+                start_epoch = 0
+
+        for epoch in range(start_epoch, epochs):
             total_reward_epoch = 0
             
             sampled_chunk_file = random.choice(chunk_files)

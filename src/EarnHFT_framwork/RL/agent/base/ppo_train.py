@@ -1,8 +1,8 @@
 import sys
 import os
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "2"
+os.environ["NUMEXPR_NUM_THREADS"] = "2"
+os.environ["OMP_NUM_THREADS"] = "2"
 os.environ["F_ENABLE_ONEDNN_OPTS"] = "0"
 import random
 import argparse
@@ -23,6 +23,7 @@ from env.low_level_env import Testing_env, Training_Env
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--epochs", type=int, default=200)
+parser.add_argument("--resume_epoch", type=int, default=0)
 parser.add_argument("--result_path", type=str, default="result_risk")
 parser.add_argument("--seed", type=int, default=12345)
 parser.add_argument("--action_dim", type=int, default=5)
@@ -110,7 +111,19 @@ class PPO(object):
         root_dir = f"{self.args.result_path}/BTCUSDT/ppo/seed_{self.seed}"
         os.makedirs(root_dir, exist_ok=True)
         
-        for epoch in range(epochs):
+        start_epoch = 0
+        if self.args.resume_epoch > 0:
+            start_epoch = self.args.resume_epoch
+            resume_dir = os.path.join(root_dir, f"epoch_{start_epoch}")
+            if os.path.exists(resume_dir):
+                print(f"RESUMING from {resume_dir}...")
+                actor.load_state_dict(torch.load(os.path.join(resume_dir, "actor.pth")))
+                critic.load_state_dict(torch.load(os.path.join(resume_dir, "critic.pth")))
+            else:
+                print(f"Cannot find resume directory {resume_dir}, starting from 0.")
+                start_epoch = 0
+        
+        for epoch in range(start_epoch, epochs):
             total_reward_epoch = 0
             loss_val = 0.0
             

@@ -24,9 +24,9 @@ from RL.util.episode_selector import (
     get_transformation_even_based_sigmoid_risk
 )
 
-os.environ["MKL_NUM_THREADS"] = "1"
-os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "2"
+os.environ["NUMEXPR_NUM_THREADS"] = "2"
+os.environ["OMP_NUM_THREADS"] = "2"
 os.environ["F_ENABLE_ONEDNN_OPTS"] = "0"
 
 parser = argparse.ArgumentParser()
@@ -41,7 +41,7 @@ parser.add_argument("--hidden_nodes", type=int, default=128)
 parser.add_argument("--tau", type=float, default=0.005)
 parser.add_argument("--batch_size", type=int, default=512)
 parser.add_argument("--update_times", type=int, default=1)
-parser.add_argument("--gamma", type=float, default=1)
+parser.add_argument("--gamma", type=float, default=0.99)
 parser.add_argument("--epsilon_init", type=float, default=0.9)
 parser.add_argument("--epsilon_min", type=float, default=0.01)
 parser.add_argument("--epsilon_step", type=float, default=5e5)

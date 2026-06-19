@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import glob
 
-torch.set_num_threads(4)
+torch.set_num_threads(16)
 
 sys.path.append(".")
 sys.path.append("src")
@@ -21,6 +21,7 @@ from RL.util.replay_buffer_DQN import Multi_step_ReplayBuffer_multi_info
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--epochs", type=int, default=100)
+parser.add_argument("--resume_epoch", type=int, default=0)
 parser.add_argument("--hidden_nodes", type=int, default=128)
 parser.add_argument("--batch_size", type=int, default=512)
 parser.add_argument("--lr_init", type=float, default=1e-3)
@@ -101,7 +102,19 @@ class RouterDQN:
         root_dir = f"result_risk/{self.args.dataset_name}/high_level/seed_{self.args.seed}"
         os.makedirs(root_dir, exist_ok=True)
         
-        for epoch in range(epochs):
+        start_epoch = 0
+        if self.args.resume_epoch > 0:
+            start_epoch = self.args.resume_epoch
+            resume_dir = os.path.join(root_dir, f"epoch_{start_epoch}")
+            if os.path.exists(resume_dir):
+                print(f"RESUMING from {resume_dir}...")
+                self.eval_net.load_state_dict(torch.load(os.path.join(resume_dir, "model.pth")))
+                self.target_net.load_state_dict(self.eval_net.state_dict())
+            else:
+                print(f"Cannot find resume directory {resume_dir}, starting from 0.")
+                start_epoch = 0
+
+        for epoch in range(start_epoch, epochs):
             random.shuffle(chunk_files)
             total_loss_epoch = 0
             

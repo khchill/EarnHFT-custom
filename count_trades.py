@@ -59,7 +59,7 @@ def get_best_epoch_action_path(model_root, mode="test"):
 models_to_check = {
     "Imbalance Volume (IV)": "result_risk/BTCUSDT/rule_base/IV",
     "MACD": "result_risk/BTCUSDT/rule_base/MACD",
-    "DQN": "result_risk/BTCUSDT/dqn_ada_0.0/seed_12345",
+    "DQN": "result_risk/BTCUSDT/dqn_ada_0/seed_12345",
     "CDQN-RP": "result_risk/BTCUSDT/cdqn_rp/seed_12345",
     "PPO": "result_risk/BTCUSDT/ppo/seed_12345",
     "DRA": "result_risk/BTCUSDT/dra_short/seed_12345",

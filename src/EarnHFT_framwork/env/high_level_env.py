@@ -48,8 +48,8 @@ class High_Level_Env:
                         net = Qnet(state_dim, action_dim, hidden_nodes=128)
                         net.load_state_dict(torch.load(path, map_location="cpu"))
                         net.eval()
-                        # Biên dịch mô hình sang TorchScript để tối ưu hoá Inference 
-                        High_Level_Env._MODEL_CACHE[(n_idx, m_idx)] = torch.jit.script(net)
+                        # Gỡ bỏ TorchScript vì gây lỗi crash với Optional[Tensor]
+                        High_Level_Env._MODEL_CACHE[(n_idx, m_idx)] = net
                     else:
                         High_Level_Env._MODEL_CACHE[(n_idx, m_idx)] = None
                         
@@ -90,12 +90,14 @@ class High_Level_Env:
         if net is not None:
             try:
                 # Gia lap 60 giay giao dich cua bot 
-                prices = np.linspace(price_current, price_next, 60)
                 current_bot_pos = self.position
                 step_rewards = []
                 
                 # Lấy data đúng từ phút hiện tại (T đến T+1) thay vì nhảy sang T+1 đến T+2
                 start_sec_idx = self.current_step - 60
+                
+                # Lấy mảng 60 mức giá thực tế thay vì dùng np.linspace (phá vỡ micro-volatility)
+                real_prices = self.price_close_array[start_sec_idx : self.current_step + 1]
                 
                 for step_sec in range(60):
                     current_sec_idx = start_sec_idx + step_sec
@@ -114,8 +116,9 @@ class High_Level_Env:
                     prev_bot_pos = current_bot_pos
                     current_bot_pos = self.positions_pool[bot_action]
                         
-                    p_curr = prices[step_sec]
-                    p_nxt = prices[step_sec + 1] if step_sec + 1 < 60 else price_next
+                    # Dùng giá thực tế
+                    p_curr = real_prices[step_sec]
+                    p_nxt = real_prices[step_sec + 1] if step_sec + 1 < len(real_prices) else price_next
                     
                     # Tính phí giao dịch (Transaction Fee) khi thay đổi vị thế
                     pos_change = abs(current_bot_pos - prev_bot_pos)
@@ -128,6 +131,7 @@ class High_Level_Env:
                 next_position = current_bot_pos
                 self.second_rewards_history.extend(step_rewards)
             except Exception as e:
+                print(f"Lỗi fail-safe khi gọi low-level bot: {e}")
                 # Cơ chế fail-safe: Giữ nguyên vị thế, reward = 0
                 next_position = self.position
                 self.second_rewards_history.extend([0.0] * 60)
@@ -136,10 +140,7 @@ class High_Level_Env:
             next_position = self.position
             self.second_rewards_history.extend([0.0] * 60)
             
-        # Tổng reward của Agent cấp cao phải bao gồm cả phí giao dịch Macro
-        pos_change_high_level = abs(next_position - self.position)
-        high_level_fee = pos_change_high_level * price_current * self.transcation_cost
-        
-        reward = (next_position * price_next) - (self.position * price_current) - high_level_fee
+
+        reward = sum(self.second_rewards_history[-60:])
         self.position = next_position
         return self._get_state(), reward, self.done, {}
