@@ -86,7 +86,6 @@ src_final_project/
 │           ├── visualize_kde.py        # Kernel Density Estimation plotting
 │           └── visualize_segment_match.py # PnL Net Curve comparisons per market segment
 ├── train_parallel.sh                   # Bash script to parallelize low-level bot training (Tmux)
-├── train_baselines_only.sh             # Bash script to train baseline models
 ├── quick_test_1_epoch.sh               # Bash script for fast, single-epoch debugging
 └── README.md                           # Main project documentation
 ```
@@ -165,13 +164,10 @@ Segment the validation dataset into multi-label volatility clusters:
 Train the DDQN base agents (Risk-aware) and Baseline models (PPO, DRA, CDQN). We use Tmux & Shell scripts to parallelize this across multiple GPU streams:
 ```bash
 # Grant execution permissions to shell scripts
-chmod +x train_parallel.sh train_baselines_only.sh quick_test_1_epoch.sh
+chmod +x train_parallel.sh quick_test_1_epoch.sh
 
 # Train Low-Level bots with Beta = [100, 30, -10, -90]
 ./train_parallel.sh
-
-# Train Baseline models
-./train_baselines_only.sh
 ```
 
 ### 4. Validation Tournament & Matrix Construction
