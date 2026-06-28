@@ -73,15 +73,19 @@ def plot_convergence():
     
     # 1. Full Model (TD + Q-Teacher)
     full_path = os.path.join(base_result_dir, "beta_30.0", "seed_12345")
-    full_epochs, full_curve = get_learning_curve(full_path, is_multi=True)
+    full_epochs, full_curve = get_learning_curve(full_path, is_multi=False)
     
     # 2. Only Q-Teacher
     teacher_path = os.path.join(base_result_dir, "only_teacher_beta_30.0", "seed_12345")
-    teacher_epochs, teacher_curve = get_learning_curve(teacher_path, is_multi=True)
+    teacher_epochs, teacher_curve = get_learning_curve(teacher_path, is_multi=False)
     
     # 3. Only TD Error
     td_path = os.path.join(base_result_dir, "only_td_beta_30.0", "seed_12345")
-    td_epochs, td_curve = get_learning_curve(td_path, is_multi=True)
+    td_epochs, td_curve = get_learning_curve(td_path, is_multi=False)
+    
+    # 4. Only Selfplay (KL)
+    selfplay_path = os.path.join(base_result_dir, "only_selfplay_kl_beta_30.0", "seed_12345")
+    selfplay_epochs, selfplay_curve = get_learning_curve(selfplay_path, is_multi=False)
 
     plt.figure(figsize=(10, 6))
     
@@ -91,6 +95,8 @@ def plot_convergence():
         plt.plot(teacher_epochs, teacher_curve, label='Only Q-Teacher', marker='s', linewidth=2)
     if td_curve:
         plt.plot(td_epochs, td_curve, label='Only TD Error', marker='^', linewidth=2)
+    if selfplay_curve:
+        plt.plot(selfplay_epochs, selfplay_curve, label='Only Selfplay (KL)', marker='x', linewidth=2)
 
     plt.title('Hội tụ Validation Reward qua các Epoch')
     plt.xlabel('Epoch')
@@ -98,8 +104,9 @@ def plot_convergence():
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.legend()
     
-    output_path = os.path.join(base_result_dir, "convergence_plot.png")
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    output_dir = "results"
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, "convergence_plot.png")
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"Đã lưu biểu đồ hội tụ tại: {output_path}")
 

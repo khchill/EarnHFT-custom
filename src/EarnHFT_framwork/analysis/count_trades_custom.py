@@ -1,0 +1,79 @@
+import numpy as np
+import os
+import argparse
+from collections import Counter
+
+def calculate_trades(action_path):
+    try:
+        actions = np.load(action_path)
+        # Số lần trade là số lần action(t) khác action(t-1)
+        if len(actions.shape) == 2:
+            num_trades = np.sum(np.any(actions[1:] != actions[:-1], axis=1))
+        else:
+            num_trades = np.sum(actions[1:] != actions[:-1])
+        return num_trades, len(actions), actions
+    except Exception as e:
+        return -1, -1, None
+
+def get_best_epoch_action_path(model_root, mode="test", custom_epoch=None):
+    """
+    Tìm thư mục epoch theo custom_epoch,
+    rồi trả về file action.npy của tập tương ứng (mode='valid' hoặc 'test').
+    Nếu không có custom_epoch thì báo lỗi.
+    """
+    if "rule_base" in model_root:
+        path = os.path.join(model_root, mode, "action.npy")
+        return (path, "rule_base") if os.path.exists(path) else (None, None)
+
+    # RL agents
+    if not os.path.exists(model_root):
+        return (None, None)
+        
+    if custom_epoch is not None:
+        path = os.path.join(model_root, custom_epoch, mode, "action.npy")
+        return (path, custom_epoch) if os.path.exists(path) else (None, None)
+    
+    return (None, None)
+
+# Khai báo model và epoch cụ thể bạn muốn kiểm tra cho TỪNG model
+models_to_check = {
+    "Imbalance Volume (IV)": ("result_risk/BTCUSDT/rule_base/IV", None),
+    "MACD": ("result_risk/BTCUSDT/rule_base/MACD", None),
+    "DQN": ("result_risk/BTCUSDT/dqn_ada_0/seed_12345", "epoch_10"),
+    "CDQN-RP": ("result_risk/BTCUSDT/cdqn_rp/seed_12345", "epoch_10"),
+    "PPO": ("result_risk/BTCUSDT/ppo/seed_12345", "epoch_10"),
+    "DRA": ("result_risk/BTCUSDT/dra_short/seed_12345", "epoch_10"),
+    "EarnHFT (High-Level Router)": ("result_risk/BTCUSDT/high_level/seed_12345", "epoch_10")
+}
+
+if __name__ == "__main__":
+    for mode in ["valid", "test"]:
+        print(f"========== TRADE COUNT CUSTOM - {mode.upper()} ==========")
+        for model_name, (root_path, custom_epoch) in models_to_check.items():
+            path, best_epoch = get_best_epoch_action_path(root_path, mode=mode, custom_epoch=custom_epoch)
+            if path is None:
+                if "rule_base" in root_path:
+                    print(f"{model_name:28s} | Chưa có dữ liệu")
+                else:
+                    print(f"{model_name:28s} | Không tìm thấy {custom_epoch}")
+                continue
+                
+            trades, total, actions = calculate_trades(path)
+            if trades != -1:
+                epoch_info = f" ({best_epoch})" if best_epoch else ""
+                print(f"{model_name:28s} | Số lần trades: {trades:5d} / {total} ticks{epoch_info}")
+                
+                # Thống kê chi tiết 25 bot cho High-Level Router
+                if model_name == "EarnHFT (High-Level Router)" and len(actions.shape) == 2:
+                    print("\n  [Thống kê chi tiết 25 Bots (Hàng n_idx: Vị thế | Cột m_idx: Chiến thuật)]")
+                    bot_counts = Counter(tuple(row) for row in actions)
+                    print("       | m=0 | m=1 | m=2 | m=3 | m=4 |")
+                    print("  -----|-----|-----|-----|-----|-----|")
+                    for n in range(5):
+                        row_counts = [bot_counts.get((n, m), 0) for m in range(5)]
+                        row_str = " | ".join(f"{count:3d}" for count in row_counts)
+                        print(f"  n={n}  | {row_str} |")
+                    print("  ------------------------------------\n")
+            else:
+                print(f"{model_name:28s} | Lỗi đọc file mảng action")
+        print("=========================================\n")

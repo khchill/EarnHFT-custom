@@ -21,48 +21,30 @@ def sort_list(lst: list):
     alphanum_key = lambda key: [convert(c) for c in re.split("([0-9]+)", key)]
     lst.sort(key=alphanum_key)
 
-def pick_agent_and_generate_result_table(root_path, name, mode='test'):
+models_to_check = {
+    "IV": ("result_risk/BTCUSDT/rule_base/IV", None),
+    "MACD": ("result_risk/BTCUSDT/rule_base/MACD", None),
+    "DQN": ("result_risk/BTCUSDT/dqn_ada_0/seed_12345", "epoch_110"),
+    "CDQN_RP": ("result_risk/BTCUSDT/cdqn_rp/seed_12345", "epoch_50"),
+    "PPO": ("result_risk/BTCUSDT/ppo/seed_12345", "epoch_30"),
+    "DRA": ("result_risk/BTCUSDT/dra_short/seed_12345", "epoch_10"),
+    "EarnHFT (Router)": ("result_risk/BTCUSDT/high_level/seed_12345", "epoch_20")
+}
+
+def pick_agent_and_generate_result_table(root_path, name, custom_epoch=None, mode='test'):
     if not os.path.exists(root_path):
         print(f"Skipping: {root_path} not found")
         return
         
-    has_epochs = False
-    subdirs = os.listdir(root_path)
-    if any(d.startswith("epoch_") for d in subdirs):
-        has_epochs = True
-        
-    if has_epochs:
-        valid_result_list = []
-        epoch_path_list = [d for d in os.listdir(root_path) if d.startswith("epoch_")]
-        sort_list(epoch_path_list)
-        
-        for epoch in epoch_path_list:
-            epoch_path = os.path.join(root_path, epoch)
-            valid_path = os.path.join(epoch_path, "valid")
-            
-            final_balance_file = os.path.join(valid_path, "final_balance.npy")
-            require_money_file = os.path.join(valid_path, "require_money.npy")
-            if not os.path.exists(final_balance_file) or not os.path.exists(require_money_file):
-                valid_result_list.append(-999999.0)
-                continue
-                
-            valid_result = np.load(final_balance_file) / (
-                np.load(require_money_file) + 1e-12
-            )
-            valid_result = float(np.mean(valid_result))
-            valid_result_list.append(valid_result)
-            
-        if not valid_result_list or max(valid_result_list) == -999999.0:
-            print(f"No valid results for {name}")
-            return
-            
-        valid_index = valid_result_list.index(max(valid_result_list))
-        best_epoch_dir = epoch_path_list[valid_index]
-        test_path = os.path.join(root_path, best_epoch_dir, mode)
-        best_epoch_name = best_epoch_dir
-    else:
+    if "rule_base" in root_path:
         test_path = os.path.join(root_path, mode)
-        best_epoch_name = "direct"
+        best_epoch_name = "rule_base"
+    else:
+        if custom_epoch is None:
+            print(f"Skipping: custom_epoch is None for {name}")
+            return
+        test_path = os.path.join(root_path, custom_epoch, mode)
+        best_epoch_name = custom_epoch
         
     reward_file = os.path.join(test_path, "reward.npy")
     require_money_file = os.path.join(test_path, "require_money.npy")
@@ -148,8 +130,7 @@ def pick_agent_and_generate_result_table(root_path, name, mode='test'):
     
     global ALL_METRIC_TEXT
     output_str = f"Model: {name}\n"
-    if has_epochs:
-        output_str += f"Best Epoch: {best_epoch_name}\n"
+    output_str += f"Custom Epoch: {best_epoch_name}\n"
     output_str += f"Mode: {mode.upper()}\n"
     output_str += str(table) + "\n"
     output_str += "-"*60 + "\n"
@@ -287,33 +268,18 @@ def plot_all_baselines_curve(root_path_list, names, mode="test", save_path="resu
         print(f"Đã vẽ xong đồ thị cho ngày {date_str} tại: {day_save_path}")
 
 
-def get_best_test_reward(root_path, mode="test", model_name=None):
+def get_custom_test_reward(root_path, custom_epoch, mode="test", model_name=None):
     if "rule_base" in root_path and model_name is not None:
         test_dir = os.path.join(root_path, mode)
         if os.path.exists(test_dir):
-            return np.load(os.path.join(test_dir, "reward.npy")),                    np.load(os.path.join(test_dir, "require_money.npy"))
+            return np.load(os.path.join(test_dir, "reward.npy")), \
+                   np.load(os.path.join(test_dir, "require_money.npy"))
         return None, None
         
-    epoch_path_list = [e for e in os.listdir(root_path) if e.startswith("epoch_")]
-    sort_list(epoch_path_list)
-    
-    valid_result_list = []
-    for epoch in epoch_path_list:
-        v_path = os.path.join(root_path, epoch, "valid")
-        final_balance_file = os.path.join(v_path, "final_balance.npy")
-        require_money_file = os.path.join(v_path, "require_money.npy")
-        
-        if os.path.exists(final_balance_file) and os.path.exists(require_money_file):
-            val = np.load(final_balance_file) / (np.load(require_money_file) + 1e-12)
-            valid_result_list.append(float(np.mean(val)))
-        else:
-            valid_result_list.append(-999999.0)
-            
-    if not valid_result_list or max(valid_result_list) == -999999.0:
+    if custom_epoch is None:
         return None, None
         
-    best_epoch = epoch_path_list[valid_result_list.index(max(valid_result_list))]
-    test_path = os.path.join(root_path, best_epoch, mode)
+    test_path = os.path.join(root_path, custom_epoch, mode)
     
     if not os.path.exists(os.path.join(test_path, "reward.npy")):
         return None, None
@@ -335,28 +301,19 @@ def visualize_all_segments(dataset_name="BTCUSDT", mode="test"):
         print(f"Thư mục {mode} trống.")
         return
         
-    models = {
-        "EarnHFT (Router)": f"result_risk/{dataset_name}/high_level/seed_12345",
-        "PPO": f"result_risk/{dataset_name}/ppo/seed_12345",
-        "DRA": f"result_risk/{dataset_name}/dra_short/seed_12345",
-        "CDQN_RP": f"result_risk/{dataset_name}/cdqn_rp/seed_12345",
-        "DQN": f"result_risk/{dataset_name}/dqn_ada_0/seed_12345",
-        "MACD": f"result_risk/{dataset_name}/rule_base/MACD",
-        "IV": f"result_risk/{dataset_name}/rule_base/IV"
-    }
-    colors = ['black', 'blue', 'purple', 'green', 'orange', 'red', 'cyan']
+    colors = ['cyan', 'red', 'orange', 'green', 'purple', 'blue', 'black']
     
     # Pre-load model results
     model_results = {}
-    for name, path in models.items():
+    for name, (path, custom_epoch) in models_to_check.items():
         if os.path.exists(path):
-            reward_full, req_money = get_best_test_reward(path, mode=mode, model_name=name)
+            reward_full, req_money = get_custom_test_reward(path, custom_epoch, mode=mode, model_name=name)
             if reward_full is not None:
                 if isinstance(req_money, float) or req_money.ndim == 0:
                     req_money = [req_money] * len(test_files)
                 model_results[name] = (reward_full, req_money)
     
-    save_dir = f"result_risk/{dataset_name}/segment_match_{mode}"
+    save_dir = f"result_risk/{dataset_name}/custom_segment_match_{mode}"
     os.makedirs(save_dir, exist_ok=True)
     
     start_step = 0
@@ -372,7 +329,7 @@ def visualize_all_segments(dataset_name="BTCUSDT", mode="test"):
         ax1.set_ylabel("Price (USDT)", fontsize=14)
         ax1.grid(linestyle="--", color="lightgray")
         
-        for (name, path), color in zip(models.items(), colors):
+        for (name, (path, custom_epoch)), color in zip(models_to_check.items(), colors):
             if name not in model_results:
                 continue
                 
@@ -432,32 +389,21 @@ def visualize_all_segments(dataset_name="BTCUSDT", mode="test"):
 
 
 if __name__ == "__main__":
-    root_path_list = [
-        "result_risk/BTCUSDT/high_level/seed_12345",
-        "result_risk/BTCUSDT/dra_short/seed_12345",
-        "result_risk/BTCUSDT/cdqn_rp/seed_12345",
-        "result_risk/BTCUSDT/ppo/seed_12345",
-        "result_risk/BTCUSDT/dqn_ada_0/seed_12345",
-        "result_risk/BTCUSDT/rule_base/MACD",
-        "result_risk/BTCUSDT/rule_base/IV",
-    ]
-    names = ["EarnHFT (Router)", "DRA", "CDQN-RP", "PPO", "DQN", "MACD", "Imbalance_Volume"]
-    
     print("================== TẬP VALIDATION ==================")
     ALL_METRIC_TEXT += "================== TẬP VALIDATION ==================\n"
-    for root_path, name in zip(root_path_list, names):
-        pick_agent_and_generate_result_table(root_path, name, mode="valid")
+    for name, (root_path, custom_epoch) in models_to_check.items():
+        pick_agent_and_generate_result_table(root_path, name, custom_epoch=custom_epoch, mode="valid")
         
     print("\n================== TẬP TEST ==================")
     ALL_METRIC_TEXT += "\n================== TẬP TEST ==================\n"
-    for root_path, name in zip(root_path_list, names):
-        pick_agent_and_generate_result_table(root_path, name, mode="test")
+    for name, (root_path, custom_epoch) in models_to_check.items():
+        pick_agent_and_generate_result_table(root_path, name, custom_epoch=custom_epoch, mode="test")
         
     # Lưu toàn bộ báo cáo dạng Text ra file
     os.makedirs("results", exist_ok=True)
-    with open("results/best_epochs_metrics.txt", "w", encoding="utf-8") as f:
+    with open("results/custom_epochs_metrics.txt", "w", encoding="utf-8") as f:
         f.write(ALL_METRIC_TEXT)
-    print("\n[+] Đã lưu tổng hợp các bảng metric (Best Epoch) vào: results/best_epochs_metrics.txt")
+    print("\n[+] Đã lưu tổng hợp các bảng metric (Custom Epoch) vào: results/custom_epochs_metrics.txt")
         
     # Chỉ vẽ đồ thị Segment Match từng ngày
     visualize_all_segments(dataset_name="BTCUSDT", mode="valid")

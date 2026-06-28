@@ -22,6 +22,7 @@ parser.add_argument("--upper_theshold", type=float, default=0.99, help="nguong t
 parser.add_argument("--lower_theshold", type=float, default=-0.99, help="nguong duoi iv")
 parser.add_argument("--result_path", type=str, default="result_risk")
 parser.add_argument("--dataset_name", type=str, default="BTCUSDT")
+parser.add_argument("--mode", type=str, default="test", choices=["test", "valid"], help="Evaluate on test or valid set")
 
 class rule_base_trader:
     def __init__(self, args):
@@ -40,14 +41,15 @@ class rule_base_trader:
         print(f"khoi tao bot thu cong: {self.indicator}")
 
     def test(self):
-        print(f"bat dau backtest bot {self.indicator} nha...")
+        mode = self.args.mode
+        print(f"bat dau backtest bot {self.indicator} nha tren {mode}...")
         
         dirs_to_save = [os.path.join("result_risk", "BTCUSDT", "rule_base", "epoch_1"), self.model_path]
         
         # test tren tap thuc te
-        test_dir_path = "data/cleaned_data/BTCUSDT/tardis/test"
+        test_dir_path = f"data/cleaned_data/BTCUSDT/tardis/{mode}"
         if not os.path.exists(test_dir_path) or not os.path.isdir(test_dir_path):
-            print(f"loi ko tim thay thu muc test o {test_dir_path}")
+            print(f"loi ko tim thay thu muc {mode} o {test_dir_path}")
             return
             
         test_files = sorted([os.path.join(test_dir_path, f) for f in os.listdir(test_dir_path) if f.endswith(".feather")])
@@ -135,7 +137,7 @@ class rule_base_trader:
             
         for d in dirs_to_save:
             os.makedirs(d, exist_ok=True)
-            t_dir = os.path.join(d, "test")
+            t_dir = os.path.join(d, mode)
             os.makedirs(t_dir, exist_ok=True)
             np.save(os.path.join(t_dir, "reward.npy"), np.array(all_rewards))
             np.save(os.path.join(t_dir, "action.npy"), np.array(all_actions))

@@ -168,7 +168,7 @@ class Testing_env(Training_Env):
             self.require_money = -self.cash
             
         if done:
-            # Khi kết thúc phiên test, ép AI thanh lý toàn bộ vị thế
+            # Khi kết thúc phiên test, ép thanh lý toàn bộ vị thế
             final_liquidation_cash = self._execute_order(0.0, self.current_step)
             self.final_balance = self.cash + final_liquidation_cash
             
